@@ -1,0 +1,20 @@
+{
+  "main": "./bundle.js",
+  "browser": {
+    "Binary": "./lib/binary.js"
+  },
+  "browserify-shim": {
+    "BinaryClient": "BinaryClient"
+  },
+  "browserify": {
+    "transform": [
+      "browserify-shim"
+    ]
+  },
+  "devDependencies": {
+    "browserify-shim": "^3.8.6"
+  },
+  "dependencies": {
+    "shortid": "^2.2.2"
+  }
+}
