@@ -3,46 +3,57 @@
 var iobio = window.iobio || {};
 window.iobio = iobio;
 
-iobio.cmd = function() {
-	var cmder = require('./cmder.js')(), // creates iobio commands 
-		conn = require('./conn.js'), // handles connection code
-		protocol = 'ws',
-		source;
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('inherits');
 
-	function my(service, params, opts) {
-		// generate base url
-		source = cmder( service, params, opts );
-		return my;
-	}
-	// Add version
-	my.version = require('./version.js');
+iobio.cmd = function(service, params, opts) {	
+	// Call EventEmitter constructor
+	EventEmitter.call(this);
 
-	// Chain commands
-	my.then = function(service, params, opts) {		
-		// add current url to params
-		params.push(my.url())
-		// generate base url
-		source = cmder( service, params, opts );		
-		return my;
-	}
+	var cmdBuilder = require('./cmdBuilder.js'); // creates iobio commands 		
+	
+	this.protocol = 'ws';
+	this.command = new cmdBuilder(service,params,opts)		
+}
 
-	// Create url
-	my.url = function() { return 'iobio://' + source; }
-	// Create http
-	my.http = function() { return 'http://' + source; }
-	// Create ws
-	my.ws = function() { return 'ws://' + source; }
+// inherit eventEmitter
+inherits(iobio.cmd, EventEmitter);
 
-	my.protocol = function(_) {
-		if (!arguments.length) return protocol;
-		protocol = _;
-		return my;
-	};
+// functions
 
-	// Execute command
-	my.run = function(callback, opts) {
-		conn(protocol, source, opts, callback);
-	}
+// Chain commands
+iobio.cmd.prototype.then = function(service, params, opts) {		
+	// add current url to params
+	params.push(this.url())
+	// generate base url
+	var cmdBuilder = require('./cmdBuilder.js');
+	this.command = new cmdBuilder( service, params, opts );	
+	return this;
+}
 
-	return my;
+// Create url
+iobio.cmd.prototype.url = function() { return 'iobio://' + this.command.getSource(); }
+// Create http
+iobio.cmd.prototype.http = function() { return 'http://' + this.command.getSource(); }
+// Create ws
+iobio.cmd.prototype.ws = function() { return 'ws://' + this.command.getSource(); }
+
+
+// getters/setters
+iobio.cmd.prototype.protocol = function(_) {
+	if (!arguments.length) return this.protocol;
+	this.protocol = _;
+	return this;
+}
+
+// Execute command
+iobio.cmd.prototype.run = function(opts) {
+	var me = this,
+		conn = require('./conn.js'), // handles connection code		
+		connection = new conn(this.protocol, this.command, this.opts);
+	
+	connection.run(
+		function(writeStream) {me.emit('writeStream', writeStream) },
+		function(data) { me.emit('data', data)}
+	);
 }

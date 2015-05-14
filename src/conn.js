@@ -1,14 +1,22 @@
+var conn = function(protocol, cmdBuilder, opts) {	
 
-var conn = function(protocol, url, opts, callback) {	
 	var runner;
+	this.cmdBuilder = cmdBuilder,
+	this.opts = opts;	
 
 	if (protocol == 'ws')
-		runner = require('./protocol/ws.js');
+		this.runner = require('./protocol/ws.js');
 	else if (protocol == 'http')
-		runner = require('./protocol/http.js');
+		this.runner = require('./protocol/http.js');
+}
 
-	runner(url,opts,callback);
-	
+// Functions
+
+// Run command on connection
+conn.prototype.run = function(callbackWrite, callbackRead) {
+	var me = this;
+	me.cmdBuilder.on('writeStream', function(s) { callbackWrite(s) })
+	me.runner(me.cmdBuilder.getSource(),me.opts,callbackRead);
 }
 
 module.exports = conn;
