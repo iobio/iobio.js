@@ -10,10 +10,13 @@ iobio.cmd = function(service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var cmdBuilder = require('./cmdBuilder.js'); // creates iobio commands 		
+	var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
+		extend = require('extend');
 	
-	this.protocol = 'ws';
-	this.command = new cmdBuilder(service,params,opts)		
+   	this.options = { /* defaults */ };
+   	extend(this.options, opts);      	
+	this.protocol = 'ws';	
+	this.command = new cmdBuilder(service,params,opts);
 }
 
 // inherit eventEmitter
@@ -22,11 +25,14 @@ inherits(iobio.cmd, EventEmitter);
 // functions
 
 // Chain commands
-iobio.cmd.prototype.then = function(service, params, opts) {		
+iobio.cmd.prototype.then = function(service, params, opts) {	
+
 	// add current url to params
 	params.push(this.url())
+	
 	// generate base url
 	var cmdBuilder = require('./cmdBuilder.js');
+	if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
 	this.command = new cmdBuilder( service, params, opts );	
 	return this;
 }
@@ -47,13 +53,16 @@ iobio.cmd.prototype.protocol = function(_) {
 }
 
 // Execute command
-iobio.cmd.prototype.run = function(opts) {
+iobio.cmd.prototype.run = function() {
 	var me = this,
 		conn = require('./conn.js'), // handles connection code		
-		connection = new conn(this.protocol, this.command, this.opts);
+		connection = new conn(this.protocol, this.command.getSource(), this.opts);
 	
-	connection.run(
-		function(writeStream) {me.emit('writeStream', writeStream) },
-		function(data) { me.emit('data', data)}
-	);
+	// run writeStream function if present
+	if (this.options.writeStream) {
+		this.command.on('writeStream', this.options.writeStream);
+	}
+
+ 	// run 
+	connection.run(function(data) { me.emit('data', data)});
 }

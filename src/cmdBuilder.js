@@ -12,22 +12,24 @@ var cmdBuilder = function(service, params, opts) {
 		sourceType;
 
 	this.source = null;
-	var me = this;
+	var me = this;	
 
-	// create url params from opts
-	var optStr = urlParams(opts);	
-
-	// handle iobio urls an files
+	// handle iobio urls and files to correct
 	for (var i=0; i< params.length; i++) {					
 		if(params[i].slice(0,8) == 'iobio://') {
 			sourceType = 'url'
 			params[i] = urlParamer(params[i]);			
 		} else if (Object.prototype.toString.call(params[i]) == '[object File]') {
 			sourceType = 'file';
-			params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)});			
+			if (opts && opts.writeStream) 
+				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)}, {write:false});
+			else
+				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)});
 		}
 	}
-	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + optStr);		
+
+	// create source url
+	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts));		
 	if (sourceType == 'file') this.source += '&protocol=websocket';
 }
 
@@ -40,6 +42,11 @@ cmdBuilder.prototype.getSource = function() {
 
 cmdBuilder.prototype.url = function() {
 	return 'http://' + this.source;
+}
+
+cmdBuilder.prototype.isFile = function() {
+	if (sourceType == 'file') return true;
+	else return false;
 }
 
 module.exports = cmdBuilder;

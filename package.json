@@ -18,6 +18,7 @@
     "browserify-shim": "^3.8.6"
   },
   "dependencies": {
+    "extend": "^2.0.1",
     "inherits": "^2.0.1",
     "shortid": "^2.2.2"
   }
