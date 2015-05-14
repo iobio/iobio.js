@@ -3,6 +3,7 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 
 ## Create Command
 
+```javascript
 	// create command using the same arguments as the original tool
 	var cmd = new iobio.cmd(
 			'samtools.iobio.io',
@@ -21,10 +22,11 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 
 	// execute command
 	cmd.run();
-
+```
 
 ## Chain Commands
 
+```javascript
 	var cmd = new iobio.cmd(
 			'samtools.iobio.io',
 			['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'],
@@ -34,19 +36,23 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 	// Run like normal
 	cmd.run(); 
 
-	// Catch data event when fired and use results
+	// Use Results
 	cmd.on('data', function(results) {
 		// do stuff with results here
 	})
+```
 
 ## Use local files
+
+```javascript
 	// Get object file from prompt
 	var cmd = new iobio.cmd('samtools', ['view', '-S', file]);			
 
-	// Catch data event when fired and use results
+	// Use results
 	cmd.on('data', function(d) {
 		// do stuff with results here
 	})
 
 	// Run like normal
 	cmd.run();
+```
