@@ -3,22 +3,11 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 
 ## Create Command
 
-	// create command using the same arguments as the original tool in this case samtools to view the header file of a remote bam file
-    var cmd = new iobio.cmd('samtools.iobio', ['view', '-H', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam']);
-	
-	// retrieve the url for this command
-	cmd.http());
-	
-
-	// Run command
-	cmd.run();
-	
-	cmd.on('data', function(d) {
-		console.log(d);
-	})
-
-	// create command using the same arguments as the original tool in this case samtools to view the header file of a remote bam file
-	var cmd = new iobio.cmd('samtools.iobio.io', ['view', '-H', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam']);
+	// create command using the same arguments as the original tool
+	var cmd = new iobio.cmd(
+			'samtools.iobio.io',
+			['view', '-H', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam']
+		);
 
 	// retrieve the url for this command
 	cmd.http();
@@ -36,7 +25,10 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 
 ## Chain Commands
 
-	var cmd = new iobio.cmd('samtools.iobio.io', ['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'], {'encoding':'binary'})
+	var cmd = new iobio.cmd(
+			'samtools.iobio.io',
+			['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'],
+			{'encoding':'binary'})
 		.then( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
 	
 	// Run like normal
