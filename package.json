@@ -1,7 +1,7 @@
 {
   "name": "iobio.js",
   "version": "0.1.0",
-  "description": "Client side iobio javascript library",
+  "description": "Client side iobio javascript library for building and executing iobio commands",
   "main": "./bundle.js",
   "browser": {
     "Binary": "./lib/binary.js"
@@ -15,7 +15,13 @@
     ]
   },
   "devDependencies": {
-    "browserify-shim": "^3.8.6"
+    "browserify-shim": "^3.8.6",
+    "gulp": "^3.8.11",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-uglify": "^1.2.0",
+    "gulp-util": "^3.0.4",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
     "extend": "^2.0.1",
