@@ -1,0 +1,60 @@
+# iobio.js
+Handles the websocket code and the sometimes tricky process of creating iobio commands
+
+## Create Command
+
+	// create command using the same arguments as the original tool in this case samtools to view the header file of a remote bam file
+    var cmd = new iobio.cmd('samtools.iobio', ['view', '-H', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam']);
+	
+	// retrieve the url for this command
+	cmd.http());
+	
+
+	// Run command
+	cmd.run();
+	
+	cmd.on('data', function(d) {
+		console.log(d);
+	})
+
+	// create command using the same arguments as the original tool in this case samtools to view the header file of a remote bam file
+	var cmd = new iobio.cmd('samtools.iobio.io', ['view', '-H', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam']);
+
+	// retrieve the url for this command
+	cmd.http();
+	// You can curl the command to make sure it's working
+	// curl "http://samtools.iobio.io/?cmd=view%20-H%20http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam"			
+
+	// Catch data event when fired and use results
+	cmd.on('data', function(results) {
+		// do stuff with results here
+	})
+
+	// execute command
+	cmd.run();
+
+
+## Chain Commands
+
+	var cmd = new iobio.cmd('samtools.iobio.io', ['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'], {'encoding':'binary'})
+		.then( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
+	
+	// Run like normal
+	cmd.run(); 
+
+	// Catch data event when fired and use results
+	cmd.on('data', function(results) {
+		// do stuff with results here
+	})
+
+## Use local files
+	// Get object file from prompt
+	var cmd = new iobio.cmd('samtools', ['view', '-S', file]);			
+
+	// Catch data event when fired and use results
+	cmd.on('data', function(d) {
+		// do stuff with results here
+	})
+
+	// Run like normal
+	cmd.run();
