@@ -1,6 +1,10 @@
 # iobio.js
 Handles the websocket code and the sometimes tricky process of creating iobio commands
 
+## Use
+
+To use simply download iobio.min.js and include in your html
+
 ## Create Command
 
 ```javascript
@@ -56,3 +60,14 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 	// Run like normal
 	cmd.run();
 ```
+
+## Developers
+
+Clone repo
+```git clone https://github.com/iobio/iobio.js.git```
+
+Install node modules
+```cd iobio.js; npm install```
+
+To build js
+```gulp buildAll```
