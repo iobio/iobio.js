@@ -1,5 +1,5 @@
 # iobio.js
-Handles the websocket code and the sometimes tricky process of creating iobio commands
+Handles the websocket code and makes creating iobio commands easier.
 
 ## Use
 
