@@ -26,7 +26,7 @@ inherits(iobio.cmd, EventEmitter);
 // functions
 
 // Chain commands
-iobio.cmd.prototype.then = function(service, params, opts) {	
+iobio.cmd.prototype.pipe = function(service, params, opts) {	
 
 	// add current url to params
 	params.push(this.url())

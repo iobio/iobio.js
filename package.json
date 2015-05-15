@@ -6,16 +6,7 @@
   "browser": {
     "Binary": "./lib/binary.js"
   },
-  "browserify-shim": {
-    "BinaryClient": "BinaryClient"
-  },
-  "browserify": {
-    "transform": [
-      "browserify-shim"
-    ]
-  },
-  "devDependencies": {
-    "browserify-shim": "^3.8.6",
+  "devDependencies": {    
     "gulp": "^3.8.11",
     "gulp-sourcemaps": "^1.5.2",
     "gulp-uglify": "^1.2.0",

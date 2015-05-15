@@ -31,7 +31,7 @@ Handles the websocket code and the sometimes tricky process of creating iobio co
 			'samtools.iobio.io',
 			['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'],
 			{'encoding':'binary'})
-		.then( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
+		.pipe( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
 	
 	// Run like normal
 	cmd.run(); 
