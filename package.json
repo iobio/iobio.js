@@ -2,16 +2,27 @@
   "name": "iobio.js",
   "version": "0.1.0",
   "description": "Client side iobio javascript library for building and executing iobio commands",
-  "main": "./bundle.js",
+  "main": "./src/cmd.js",
   "browser": {
-    "Binary": "./lib/binary.js"
+    "Binary": "./lib/binary.js",
+    "iobiojs": "./iobio.min.js"
   },
+  "browserify-shim": {
+    "external": "global:External"
+  },  
   "devDependencies": {
+    "brfs": "^1.4.0",
     "browserify": "^10.2.0",
+    "browserify-shim": "~3.8.0",
     "gulp": "^3.8.11",
     "gulp-sourcemaps": "^1.5.2",
     "gulp-uglify": "^1.2.0",
     "gulp-util": "^3.0.4",
+    "karma": "^0.12.31",
+    "karma-browserify": "^4.1.2",
+    "karma-chrome-launcher": "^0.1.7",
+    "karma-jasmine": "^0.3.5",
+    "karma-phantomjs-launcher": "^0.1.4",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
   },
@@ -19,5 +30,8 @@
     "extend": "^2.0.1",
     "inherits": "^2.0.1",
     "shortid": "^2.2.2"
+  },
+  "scripts": {
+    "test": "node ./node_modules/karma/bin/karma start"
   }
 }

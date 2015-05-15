@@ -1,1 +1,5 @@
+// ignore node modules
 node_modules/
+
+// ignore source map
+iobio.js.map

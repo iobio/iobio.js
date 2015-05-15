@@ -1,7 +1,9 @@
 // Grab an existing iobio namespace object, or create a blank object
 // if it doesn't exist
-var iobio = window.iobio || {};
-window.iobio = iobio;
+var iobio = global.iobio || {};
+global.iobio = iobio;
+// export if being used as a node module - needed for test framework
+if ( typeof module === 'object' ) { module.exports = iobio;}
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');

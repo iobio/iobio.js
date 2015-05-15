@@ -5,16 +5,15 @@ var browserify = require('browserify'),
 	source = require('vinyl-source-stream'),
 	buffer = require('vinyl-buffer'),
 	uglify = require('gulp-uglify'),
-	sourcemaps = require('gulp-sourcemaps');
+	sourcemaps = require('gulp-sourcemaps'),
+	karma = require('karma').server,
+	path = require('path');
 
-gulp.task('default', function() {
-  // place code for your default task here
-});
+var configFile = path.resolve(__dirname, 'test/karma.conf.js');
 
-gulp.task('clean', function() {
-	rimraf.sync('./dist/js');	
-})
-
+/**
+ * Build JS with souremaps for debugging
+ */
 gulp.task('js-debug', function () {
   // set up the browserify instance on a task basis
   var b = browserify({
@@ -31,6 +30,9 @@ gulp.task('js-debug', function () {
 });
 
 
+/**
+ * Build minified production ready JS lib
+ */
 gulp.task('js', function () {
   // set up the browserify instance on a task basis
   var b = browserify({
@@ -46,7 +48,17 @@ gulp.task('js', function () {
     .pipe(gulp.dest('./'));
 });
 
-gulp.task('buildAll', ['js', 'js-debug']);
+/**
+ * Run test once and exit
+ */
+gulp.task('test', function (done) {
+  karma.start({
+    configFile: configFile,
+    singleRun: true
+  }, done);
+});
+
+gulp.task('build', ['js', 'js-debug', 'test']);
  
-gulp.task('default', ['js']);
+gulp.task('default', ['js', 'js-debug']);
 

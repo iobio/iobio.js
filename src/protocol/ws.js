@@ -10,7 +10,7 @@ var ws = function(url,opts,callback) {
       });
 
       stream.on('end', function() {
-      	// fire end
+      	// fire end;
       })      
     });
 }
