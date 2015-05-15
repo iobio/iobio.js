@@ -6,7 +6,8 @@
   "browser": {
     "Binary": "./lib/binary.js"
   },
-  "devDependencies": {    
+  "devDependencies": {
+    "browserify": "^10.2.0",
     "gulp": "^3.8.11",
     "gulp-sourcemaps": "^1.5.2",
     "gulp-uglify": "^1.2.0",
