@@ -63,13 +63,32 @@ To use simply download iobio.min.js and include in your html
 
 ## Developers
 
-To get going you need to clone the repo and install the node modules
+### Download 
+To get going you need to clone the repo from github
 ```
 git clone https://github.com/iobio/iobio.js.git
+```
+
+### Install Dependencies
+This will install all needed node modules
+```
 cd iobio.js; npm install
 ```
 
-To build js
+
+### Build JS
+This will create a single development js file from everything in the ```src``` directory with sourcemaps for debugging.
 ```
-gulp buildAll
+gulp js-debug
+```
+
+This will create a single minified js file (ready for production) from everything in the ```src``` directory.
+```
+gulp js
+```
+
+### Run tests
+Runs all tests found in the ```test``` directory
+```
+gulp test
 ```
