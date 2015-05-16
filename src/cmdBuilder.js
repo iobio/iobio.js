@@ -19,7 +19,7 @@ var cmdBuilder = function(service, params, opts) {
 		if(params[i].slice(0,8) == 'iobio://') {
 			sourceType = 'url'
 			params[i] = urlParamer(params[i]);			
-		} else if (Object.prototype.toString.call(params[i]) == '[object File]') {
+		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
 			sourceType = 'file';
 			if (opts && opts.writeStream) 
 				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)}, {write:false});
