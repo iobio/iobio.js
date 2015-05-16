@@ -31,9 +31,9 @@ describe("Command", function() {
             cmd.on('data', function(d) {                
                 data = d.split('\t')[0];
                 done();
-            },100000)
-        });
-        it("simple command", function() {
+            })
+        },10000);
+        it("simple url command", function() {
             expect(data).toEqual('ERR194147.602999777');                        
         });
     });
@@ -47,10 +47,28 @@ describe("Command", function() {
             cmdPipe.on('data', function(d) {                
                 data = JSON.parse(d).name;
                 done();
-            },100000)
-        });
-        it("piped command", function() {
+            })
+        },10000);
+        it("piped url command", function() {
             expect(data).toEqual('ERR194147.602999777');                        
+        });
+    });
+
+    describe("Execute", function() {
+        var data;        
+        var sam = "@HD\tVN:1.3\tSO:coordinate\n@SQ\tSN:1\tLN:249250621\n@RG\tID:ERR194147\tLB:NA12878_1\tPL:ILLUMINA\tPU:ILLUMINA-1\tSM:NA12878\nERR194147.602999777 147 1   11919   0   101M    =   11675   -345\   ATTTGCTGTCTCTTAGCCCAGACTTCCCGTGTCCTTTCCACCGGGCCTTTGAGAGGTCACAGGGTCTTGATGCTGTGGTCTTCATCTGCAGGTGTCTGACT   B@>CEIIIJJJJGHJIGGIIGDIEHFFCFHFGHIFFHEFCE@BBEBECDFDDDDBEDGEFEABEDEBDCDDEFEDDADCDBCEDCDDDECBDEDEECB?AA   MC:Z:101M   BD:Z:KBKOSRLQNONMLMPPKOOKONLLMJLLIINMNLBLMNIMLLJNNMKAJLJJJLMMMHHNLIMMKKJLMLNONHHMMMKKKMMLKNNNOMNIJONRPONJJ  MD:Z:101    PG:Z:MarkDuplicates RG:Z:ERR194147  BI:Z:OFMQTTNRPRPQOQRRMQRORQONPLNPLLPPOOFNPPLPNNLPQOOFMPLNKONOPKKPOKNOMNLOOOPQQKKPNOMNMPPOMQPPPOOLLPOSRQQMM  NM:i:0  MQ:i:0  AS:i:101    XS:i:101\n";
+        var file = new Blob([sam]);         
+
+        var cmdFile = new iobio.cmd('samtools.iobio.io', ['view', '-S', '-H', file]);           
+        cmdFile.run();
+        beforeEach(function(done) {
+            cmdFile.on('data', function(d) {
+                data = d.split("\t").join("").split("\n").join("");
+                done();
+            })
+        },10000);
+        it("simple file command", function() {            
+            expect(data).toEqual("@HDVN:1.3SO:coordinate@SQSN:1LN:249250621@RGID:ERR194147LB:NA12878_1PL:ILLUMINAPU:ILLUMINA-1SM:NA12878");
         });
     });
 });
