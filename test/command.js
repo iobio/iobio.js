@@ -31,7 +31,7 @@ describe("Command", function() {
             cmd.on('data', function(d) {                
                 data = d.split('\t')[0];
                 done();
-            },20)
+            },100000)
         });
         it("simple command", function() {
             expect(data).toEqual('ERR194147.602999777');                        
@@ -47,7 +47,7 @@ describe("Command", function() {
             cmdPipe.on('data', function(d) {                
                 data = JSON.parse(d).name;
                 done();
-            },20)
+            },100000)
         });
         it("piped command", function() {
             expect(data).toEqual('ERR194147.602999777');                        

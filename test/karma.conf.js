@@ -1,6 +1,13 @@
 // Karma configuration
 // http://karma-runner.github.io/0.12/config/configuration-file.html
 
+var cover = require('browserify-istanbul');
+
+var coverOptions = {
+  ignore: ['test/**/*.js', '**/lib/**/*.js'],
+  defaultIgnore: true
+}
+
 module.exports = function(config) {
   'use strict';
 
@@ -10,8 +17,8 @@ module.exports = function(config) {
 
 
     preprocessors: {
-      'test/**/*.js': [ 'browserify' ],      
-      'src/**/*.js': [ 'browserify', 'coverage']
+      'test/**/*.js': [ 'browserify' ],
+      'src/**/*.js': [ 'browserify' ]
     },
 
     // generate results in lcov format for coveralls
@@ -23,7 +30,7 @@ module.exports = function(config) {
     // browserify configuration
     browserify: {
       debug: true,
-      transform: [ 'brfs', 'browserify-shim' ]
+      transform: [ 'brfs', 'browserify-shim', cover(coverOptions) ]
     },
 
     // base path, that will be used to resolve files and exclude
@@ -52,7 +59,7 @@ module.exports = function(config) {
     // - Safari (only Mac)
     // - PhantomJS
     // - IE (only Windows)
-    browsers: ['Chrome'],
+    browsers: ['Chrome', 'Firefox'],
 
     // enable / disable watching file and executing tests whenever any file changes
     autoWatch: true,
@@ -65,12 +72,6 @@ module.exports = function(config) {
     // level of logging
     // possible values: LOG_DISABLE || LOG_ERROR || LOG_WARN || LOG_INFO || LOG_DEBUG
     logLevel: config.LOG_INFO,
-
-    // Uncomment the following lines if you are using grunt's server to run the tests
-    // proxies: {
-    //   '/': 'http://localhost:9000/'
-    // },
-    // URL root prevent conflicts with the site root
-    // urlRoot: '_karma_'
+    
   });
 };
