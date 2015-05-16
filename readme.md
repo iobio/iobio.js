@@ -1,4 +1,4 @@
-# iobio.js [![Build Status](https://travis-ci.org/iobio/iobio.js.svg?branch=master)](https://travis-ci.org/iobio/iobio.js)
+# iobio.js [![Build Status](https://travis-ci.org/iobio/iobio.js.svg?branch=master)](https://travis-ci.org/iobio/iobio.js) [![Coverage Status](https://coveralls.io/repos/iobio/iobio.js/badge.svg?branch=master)](https://coveralls.io/r/iobio/iobio.js?branch=master)
 Handles the websocket code and makes creating iobio commands easier.
 
 ## Use
