@@ -7,7 +7,8 @@ var browserify = require('browserify'),
 	uglify = require('gulp-uglify'),
 	sourcemaps = require('gulp-sourcemaps'),
 	karma = require('karma').server,
-	path = require('path');
+	path = require('path'),
+	coveralls = require('gulp-coveralls');
 
 var configFile = path.resolve(__dirname, 'test/karma.conf.js');
 
