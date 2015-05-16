@@ -58,6 +58,14 @@ gulp.task('test', function (done) {
   }, done);
 });
 
+/**
+ * Send coverage to coveralls
+ */
+gulp.task('coveralls', function() {
+	gulp.src('test/coverage/lcov.info')
+		.pipe(coveralls());
+})
+
 gulp.task('build', ['js', 'js-debug', 'test']);
  
 gulp.task('default', ['js', 'js-debug']);

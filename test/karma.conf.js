@@ -8,8 +8,16 @@ module.exports = function(config) {
     // testing framework to use (jasmine/mocha/qunit/...)
     frameworks: ['jasmine', 'browserify'],
 
+
     preprocessors: {
-      'test/**/*.js': [ 'browserify' ]
+      'test/**/*.js': [ 'browserify' ],      
+      'src/**/*.js': [ 'browserify', 'coverage']
+    },
+
+    // generate results in lcov format for coveralls
+    coverageReporter: {
+      type: 'lcov', // lcov or lcovonly are required for generating lcov.info files
+      dir: 'test/coverage/'
     },
 
     // browserify configuration
@@ -23,7 +31,8 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'test/**/*.js'
+      'test/**/*.js',
+      'src/**/*.js'
     ],
 
     // list of files / patterns to exclude
@@ -33,7 +42,7 @@ module.exports = function(config) {
     port: 9876,
 
     //A list of reporters to use.
-    reporters: [ 'dots' ],
+    reporters: [ 'dots', 'coverage' ],
 
     // Start these browsers, currently available:
     // - Chrome
@@ -43,7 +52,7 @@ module.exports = function(config) {
     // - Safari (only Mac)
     // - PhantomJS
     // - IE (only Windows)
-    browsers: ['Chrome', 'Firefox'],
+    browsers: ['Chrome'],
 
     // enable / disable watching file and executing tests whenever any file changes
     autoWatch: true,

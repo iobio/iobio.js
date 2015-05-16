@@ -3,3 +3,6 @@ node_modules/
 
 // ignore source map
 iobio.js.map
+
+// ignore coverage
+test/coverage
