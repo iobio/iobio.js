@@ -59,6 +59,14 @@ gulp.task('test', function (done) {
   }, done);
 });
 
+gulp.task('testTravis', function (done) {
+  karma.start({
+    configFile: configFile,
+    singleRun: true,
+    browsers: ['Firefox']
+  }, done);
+});
+
 /**
  * Send coverage to coveralls
  */

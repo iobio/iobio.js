@@ -38,6 +38,6 @@
   },
   "scripts": {
     "testServer": "node ./node_modules/karma/bin/karma start test/karma.conf.js",
-    "test": "node ./node_modules/karma/bin/karma start test/karma.conf.js --browsers Firefox --single-run --reporters dots"
+    "test": "gulp testTravis"
   }
 }
