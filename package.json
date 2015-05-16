@@ -16,7 +16,6 @@
     "browserify-shim": "~3.8.0",
     "coveralls": "^2.11.2",
     "gulp": "^3.8.11",
-    "gulp-coveralls": "^0.1.4",
     "gulp-sourcemaps": "^1.5.2",
     "gulp-uglify": "^1.2.0",
     "gulp-util": "^3.0.4",

@@ -7,8 +7,7 @@ var browserify = require('browserify'),
 	uglify = require('gulp-uglify'),
 	sourcemaps = require('gulp-sourcemaps'),
 	karma = require('karma').server,
-	path = require('path'),
-	coveralls = require('gulp-coveralls');
+	path = require('path');
 
 var configFile = path.resolve(__dirname, 'test/karma.conf.js');
 
@@ -66,14 +65,6 @@ gulp.task('testTravis', function (done) {
     browsers: ['Firefox']
   }, done);
 });
-
-/**
- * Send coverage to coveralls
- */
-gulp.task('coveralls', function() {
-	gulp.src('test/coverage/lcov.info')
-		.pipe(coveralls());
-})
 
 gulp.task('build', ['js', 'js-debug', 'test']);
  
