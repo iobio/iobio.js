@@ -34,7 +34,7 @@ To use simply download iobio.min.js and include in your html
  var cmd = new iobio.cmd(
 		'samtools.iobio.io',
 		['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'],
-		{'encoding':'binary'})
+		{ 'urlparams': {'encoding':'binary'} })
 	.pipe( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
 
  // Run like normal

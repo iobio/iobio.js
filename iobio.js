@@ -4042,7 +4042,8 @@ var cmdBuilder = function(service, params, opts) {
 		eventEmitter = require('events').EventEmitter(),
 		fileParamer = require('./source/file.js'),
 		urlParamer = require('./source/url.js'),
-		sourceType;
+		sourceType
+		opts = opts || {};
 
 	this.source = null;
 	var me = this;	
@@ -4062,7 +4063,7 @@ var cmdBuilder = function(service, params, opts) {
 	}
 
 	// create source url
-	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts));		
+	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams));		
 	if (sourceType == 'file') this.source += '&protocol=websocket';
 }
 
@@ -4075,11 +4076,6 @@ cmdBuilder.prototype.getSource = function() {
 
 cmdBuilder.prototype.url = function() {
 	return 'http://' + this.source;
-}
-
-cmdBuilder.prototype.isFile = function() {
-	if (sourceType == 'file') return true;
-	else return false;
 }
 
 module.exports = cmdBuilder;
@@ -4148,9 +4144,9 @@ var file = function(service, fileObj, callback, opts) {
     })
 
     // fires when stream is ready write
-    client.on('stream', function(stream, opts) {      
+    client.on('stream', function(stream, opts) {              
         callback(stream);
-        if (options.write) {
+        if (options.write) {            
             var reader = new FileReader();               
             reader.onload = function(evt) { stream.write(evt.target.result); }
             reader.onloadend = function(evt) { stream.end(); }             

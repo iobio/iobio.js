@@ -19,9 +19,9 @@ var file = function(service, fileObj, callback, opts) {
     })
 
     // fires when stream is ready write
-    client.on('stream', function(stream, opts) {      
+    client.on('stream', function(stream, opts) {              
         callback(stream);
-        if (options.write) {
+        if (options.write) {            
             var reader = new FileReader();               
             reader.onload = function(evt) { stream.write(evt.target.result); }
             reader.onloadend = function(evt) { stream.end(); }             
