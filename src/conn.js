@@ -1,23 +1,34 @@
 // Create connection and handle the results
 
-var conn = function(protocol, url, opts) {	
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('inherits');
 
-	var runner;	
+var conn = function(protocol, url, opts) {	
+	// Call EventEmitter constructor
+	EventEmitter.call(this);
+
+	var me = this;	
 	this.opts = opts;
 	this.url = url	
 
 	if (protocol == 'ws')
-		this.runner = require('./protocol/ws.js');
+		this.Runner  = require('./protocol/ws.js');
 	else if (protocol == 'http')
-		this.runner = require('./protocol/http.js');
+		this.Runner = require('./protocol/http.js');	
 }
+
+// inherit eventEmitter
+inherits(conn, EventEmitter);
 
 // Functions
 
 // Run command on connection
-conn.prototype.run = function(callback) {
-	var me = this;	
-	me.runner(this.url,me.opts,callback);
+conn.prototype.run = function() {
+	// run
+	var runner = new this.Runner(this.url,this.opts);
+
+	// bind stream events	
+	require('./utils/bindStreamEvents')(this,runner);
 }
 
 module.exports = conn;

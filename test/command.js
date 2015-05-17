@@ -38,6 +38,20 @@ describe("Command", function() {
         });
     });
 
+    describe("Stream event", function() {
+        var response;
+        cmd.run();
+        beforeEach(function(done) {
+            cmd.on('end', function(d) {                
+                response = 'end';
+                done();
+            })
+        },10000);
+        it("emits 'end' event", function() {
+            expect(response).toEqual('end');                        
+        });
+    });
+
     describe("Execute", function() {
         var data;
         var cmdPipe = new iobio.cmd(
@@ -80,9 +94,9 @@ describe("Command", function() {
         var sam = "@HD\tVN:1.3\tSO:coordinate\n@SQ\tSN:1\tLN:249250621\n@RG\tID:ERR194147\tLB:NA12878_1\tPL:ILLUMINA\tPU:ILLUMINA-1\tSM:NA12878\nERR194147.602999777 147 1   11919   0   101M    =   11675   -345\   ATTTGCTGTCTCTTAGCCCAGACTTCCCGTGTCCTTTCCACCGGGCCTTTGAGAGGTCACAGGGTCTTGATGCTGTGGTCTTCATCTGCAGGTGTCTGACT   B@>CEIIIJJJJGHJIGGIIGDIEHFFCFHFGHIFFHEFCE@BBEBECDFDDDDBEDGEFEABEDEBDCDDEFEDDADCDBCEDCDDDECBDEDEECB?AA   MC:Z:101M   BD:Z:KBKOSRLQNONMLMPPKOOKONLLMJLLIINMNLBLMNIMLLJNNMKAJLJJJLMMMHHNLIMMKKJLMLNONHHMMMKKKMMLKNNNOMNIJONRPONJJ  MD:Z:101    PG:Z:MarkDuplicates RG:Z:ERR194147  BI:Z:OFMQTTNRPRPQOQRRMQRORQONPLNPLLPPOOFNPPLPNNLPQOOFMPLNKONOPKKPOKNOMNLOOOPQQKKPNOMNMPPOMQPPPOOLLPOSRQQMM  NM:i:0  MQ:i:0  AS:i:101    XS:i:101\n";
         var file = new Blob();          
 
-        var cmdFile = new iobio.cmd('samtools.iobio.io', ['view', '-S', '-H', file], {writeStream: function(stream) {            
+        var cmdFile = new iobio.cmd('samtools.iobio.io', ['view', '-S', '-H', file], {writeStream: function(stream, done) {            
             stream.write(sam);
-            stream.end();
+            done();
         }});            
         cmdFile.run();
         beforeEach(function(done) {

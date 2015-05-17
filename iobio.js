@@ -67,12 +67,15 @@ iobio.cmd.prototype.run = function() {
 		conn = require('./conn.js'), // handles connection code		
 		connection = new conn(this.protocol, this.command.getSource(), this.opts);
 
+	// bind events
+	require('./utils/bindStreamEvents')(this,connection);
+
  	// run 
-	connection.run(function(data) { me.emit('data', data)});
+	connection.run();
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./cmdBuilder.js":18,"./conn.js":19,"events":7,"extend":8,"inherits":9}],2:[function(require,module,exports){
+},{"./cmdBuilder.js":18,"./conn.js":19,"./utils/bindStreamEvents":24,"events":7,"extend":8,"inherits":9}],2:[function(require,module,exports){
 (function (Buffer){
 /*! binary.js build:0.2.1, development. Copyright(c) 2012 Eric Zhang <eric@ericzhang.com> MIT Licensed */
 (function(exports){
@@ -4068,52 +4071,80 @@ cmdBuilder.prototype.url = function() {
 }
 
 module.exports = cmdBuilder;
-},{"./source/file.js":22,"./source/url.js":23,"./utils/hash2UrlParams.js":24,"events":7}],19:[function(require,module,exports){
+},{"./source/file.js":22,"./source/url.js":23,"./utils/hash2UrlParams.js":25,"events":7}],19:[function(require,module,exports){
 // Create connection and handle the results
 
-var conn = function(protocol, url, opts) {	
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('inherits');
 
-	var runner;	
+var conn = function(protocol, url, opts) {	
+	// Call EventEmitter constructor
+	EventEmitter.call(this);
+
+	var me = this;	
 	this.opts = opts;
 	this.url = url	
 
 	if (protocol == 'ws')
-		this.runner = require('./protocol/ws.js');
+		this.Runner  = require('./protocol/ws.js');
 	else if (protocol == 'http')
-		this.runner = require('./protocol/http.js');
+		this.Runner = require('./protocol/http.js');	
 }
+
+// inherit eventEmitter
+inherits(conn, EventEmitter);
 
 // Functions
 
 // Run command on connection
-conn.prototype.run = function(callback) {
-	var me = this;	
-	me.runner(this.url,me.opts,callback);
+conn.prototype.run = function() {
+	// run
+	var runner = new this.Runner(this.url,this.opts);
+
+	// bind stream events	
+	require('./utils/bindStreamEvents')(this,runner);
 }
 
 module.exports = conn;
-},{"./protocol/http.js":20,"./protocol/ws.js":21}],20:[function(require,module,exports){
+},{"./protocol/http.js":20,"./protocol/ws.js":21,"./utils/bindStreamEvents":24,"events":7,"inherits":9}],20:[function(require,module,exports){
 
 },{}],21:[function(require,module,exports){
-var ws = function(url,opts,callback) {
-	var wsUrl = 'ws://' + url
-  var BinaryClient = require('Binary').BinaryClient;
-	var client = BinaryClient(wsUrl);                
-    client.on('open', function(stream){
-      var stream = client.createStream({event:'run', params : {'url':wsUrl}});          
-      
-      stream.on('data', function(data, options) {
-        callback(data);
-      });
+// Websocket code for running iobio command and getting results
 
-      stream.on('end', function() {
-      	// fire end;
-      })      
-    });
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('inherits');
+
+var ws = function(url,opts) {
+	// Call EventEmitter constructor
+	EventEmitter.call(this);
+
+	var wsUrl = 'ws://' + url,
+		BinaryClient = require('Binary').BinaryClient,
+		client = BinaryClient(wsUrl),
+		me = this;                
+
+		client.on('open', function(stream){
+			var stream = client.createStream({event:'run', params : {'url':wsUrl}});          
+			
+			stream.on('data', function(data, options) {
+				me.emit('data', data);
+			});
+
+			stream.on('end', function() {
+				me.emit('end');
+			})   
+
+			stream.on('error', function(error) {
+				me.emit('error', error);
+			})      
+		});
 }
 
+// inherit eventEmitter
+inherits(ws, EventEmitter);
+
 module.exports = ws;
-},{"Binary":2}],22:[function(require,module,exports){
+},{"Binary":2,"events":7,"inherits":9}],22:[function(require,module,exports){
 // Create iobio url for a file command and setup stream for reading the file to the iobio web service
 
 var file = function(service, fileObj, opts) {   
@@ -4135,7 +4166,7 @@ var file = function(service, fileObj, opts) {
     // fires when stream is ready write
     client.on('stream', function(stream, opts) {                      
         if (options.writeStream) 
-            options.writeStream(stream)
+            options.writeStream(stream, function() {stream.end()})
         else {
             var reader = new FileReader();               
             reader.onload = function(evt) { stream.write(evt.target.result); }
@@ -4159,6 +4190,15 @@ var url = function(param) {
 
 module.exports = url;
 },{}],24:[function(require,module,exports){
+var bindStreamEvents = function(parent, child) {
+	// handle events
+	child.on('data', function(data) { parent.emit('data',data)});
+	child.on('end',   function() { parent.emit('end')});
+	child.on('error', function(error) { parent.emit('error',error)});
+}
+
+module.exports = bindStreamEvents;	
+},{}],25:[function(require,module,exports){
 var urlParams = function(params) {
 	var str = ''
 	if (params)

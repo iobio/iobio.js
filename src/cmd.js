@@ -65,6 +65,9 @@ iobio.cmd.prototype.run = function() {
 		conn = require('./conn.js'), // handles connection code		
 		connection = new conn(this.protocol, this.command.getSource(), this.opts);
 
+	// bind events
+	require('./utils/bindStreamEvents')(this,connection);
+
  	// run 
-	connection.run(function(data) { me.emit('data', data)});
+	connection.run();
 }
