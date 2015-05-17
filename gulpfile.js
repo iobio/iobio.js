@@ -66,7 +66,7 @@ gulp.task('testTravis', function (done) {
   }, done);
 });
 
-gulp.task('build', ['js', 'js-debug', 'test']);
+gulp.task('build', ['js', 'js-debug'], function() { gulp.start('test') });
  
 gulp.task('default', ['js', 'js-debug']);
 
