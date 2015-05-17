@@ -1,15 +1,13 @@
-// create url for file and setup streams
+// Create iobio url for a file command and setup stream for reading the file to the iobio web service
 
-var file = function(service, fileObj, callback, opts) {   
+var file = function(service, fileObj, opts) {   
     var me = this,
         BinaryClient = require('Binary').BinaryClient,
         connectionID = require('shortid').generate(),
         extend = require('extend'),
-        options = { write:true };
+        options = { /* defaults */ };
     
     extend(options, opts);
-
-
 
     // set client id for service that will be written to
     var client = BinaryClient( 'ws://' + service + '?id=', {'connectionID' : connectionID} );
@@ -19,9 +17,10 @@ var file = function(service, fileObj, callback, opts) {
     })
 
     // fires when stream is ready write
-    client.on('stream', function(stream, opts) {              
-        callback(stream);
-        if (options.write) {            
+    client.on('stream', function(stream, opts) {                      
+        if (options.writeStream) 
+            options.writeStream(stream)
+        else {
             var reader = new FileReader();               
             reader.onload = function(evt) { stream.write(evt.target.result); }
             reader.onloadend = function(evt) { stream.end(); }             
@@ -31,6 +30,5 @@ var file = function(service, fileObj, callback, opts) {
 
     return  encodeURIComponent("http://client?&id="+connectionID) ;
 }
-
 
 module.exports = file;

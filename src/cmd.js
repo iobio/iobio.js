@@ -1,3 +1,5 @@
+// Creates and executes iobio commands
+
 // Grab an existing iobio namespace object, or create a blank object
 // if it doesn't exist
 var iobio = global.iobio || {};
@@ -9,6 +11,8 @@ if ( typeof module === 'object' ) { module.exports = iobio;}
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
+
+// Command function starts here
 iobio.cmd = function(service, params, opts) {	
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
@@ -60,11 +64,6 @@ iobio.cmd.prototype.run = function() {
 	var me = this,
 		conn = require('./conn.js'), // handles connection code		
 		connection = new conn(this.protocol, this.command.getSource(), this.opts);
-	
-	// run writeStream function if present
-	if (this.options.writeStream) {
-		this.command.on('writeStream', this.options.writeStream);
-	}
 
  	// run 
 	connection.run(function(data) { me.emit('data', data)});

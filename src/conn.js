@@ -1,3 +1,5 @@
+// Create connection and handle the results
+
 var conn = function(protocol, url, opts) {	
 
 	var runner;	

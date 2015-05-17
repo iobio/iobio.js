@@ -1,10 +1,6 @@
-var EventEmitter = require('events').EventEmitter;
-var inherits = require('inherits');
+// Creates the command
 
-var cmdBuilder = function(service, params, opts) {
-	// Call EventEmitter constructor
-	EventEmitter.call(this);
-
+var cmdBuilder = function(service, params, opts) {	
 	var urlParams = require('./utils/hash2UrlParams.js'),
 		eventEmitter = require('events').EventEmitter(),
 		fileParamer = require('./source/file.js'),
@@ -21,11 +17,8 @@ var cmdBuilder = function(service, params, opts) {
 			sourceType = 'url'
 			params[i] = urlParamer(params[i]);			
 		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
-			sourceType = 'file';
-			if (opts && opts.writeStream) 
-				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)}, {write:false});
-			else
-				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)});
+			sourceType = 'file';			
+			params[i] = fileParamer(service, params[i], opts);			
 		}
 	}
 
@@ -33,9 +26,6 @@ var cmdBuilder = function(service, params, opts) {
 	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams));		
 	if (sourceType == 'file') this.source += '&protocol=websocket';
 }
-
-// inherit eventEmitter
-inherits(cmdBuilder, EventEmitter);
 
 cmdBuilder.prototype.getSource = function() {
 	return this.source;

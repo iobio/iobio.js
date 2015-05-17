@@ -1,5 +1,7 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (global){
+// Creates and executes iobio commands
+
 // Grab an existing iobio namespace object, or create a blank object
 // if it doesn't exist
 var iobio = global.iobio || {};
@@ -11,6 +13,8 @@ if ( typeof module === 'object' ) { module.exports = iobio;}
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
+
+// Command function starts here
 iobio.cmd = function(service, params, opts) {	
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
@@ -62,11 +66,6 @@ iobio.cmd.prototype.run = function() {
 	var me = this,
 		conn = require('./conn.js'), // handles connection code		
 		connection = new conn(this.protocol, this.command.getSource(), this.opts);
-	
-	// run writeStream function if present
-	if (this.options.writeStream) {
-		this.command.on('writeStream', this.options.writeStream);
-	}
 
  	// run 
 	connection.run(function(data) { me.emit('data', data)});
@@ -4031,13 +4030,9 @@ module.exports = {
 module.exports = 0;
 
 },{}],18:[function(require,module,exports){
-var EventEmitter = require('events').EventEmitter;
-var inherits = require('inherits');
+// Creates the command
 
-var cmdBuilder = function(service, params, opts) {
-	// Call EventEmitter constructor
-	EventEmitter.call(this);
-
+var cmdBuilder = function(service, params, opts) {	
 	var urlParams = require('./utils/hash2UrlParams.js'),
 		eventEmitter = require('events').EventEmitter(),
 		fileParamer = require('./source/file.js'),
@@ -4054,11 +4049,8 @@ var cmdBuilder = function(service, params, opts) {
 			sourceType = 'url'
 			params[i] = urlParamer(params[i]);			
 		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
-			sourceType = 'file';
-			if (opts && opts.writeStream) 
-				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)}, {write:false});
-			else
-				params[i] = fileParamer(service, params[i], function (s) {me.emit('writeStream', s)});
+			sourceType = 'file';			
+			params[i] = fileParamer(service, params[i], opts);			
 		}
 	}
 
@@ -4066,9 +4058,6 @@ var cmdBuilder = function(service, params, opts) {
 	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams));		
 	if (sourceType == 'file') this.source += '&protocol=websocket';
 }
-
-// inherit eventEmitter
-inherits(cmdBuilder, EventEmitter);
 
 cmdBuilder.prototype.getSource = function() {
 	return this.source;
@@ -4079,7 +4068,9 @@ cmdBuilder.prototype.url = function() {
 }
 
 module.exports = cmdBuilder;
-},{"./source/file.js":22,"./source/url.js":23,"./utils/hash2UrlParams.js":24,"events":7,"inherits":9}],19:[function(require,module,exports){
+},{"./source/file.js":22,"./source/url.js":23,"./utils/hash2UrlParams.js":24,"events":7}],19:[function(require,module,exports){
+// Create connection and handle the results
+
 var conn = function(protocol, url, opts) {	
 
 	var runner;	
@@ -4123,18 +4114,16 @@ var ws = function(url,opts,callback) {
 
 module.exports = ws;
 },{"Binary":2}],22:[function(require,module,exports){
-// create url for file and setup streams
+// Create iobio url for a file command and setup stream for reading the file to the iobio web service
 
-var file = function(service, fileObj, callback, opts) {   
+var file = function(service, fileObj, opts) {   
     var me = this,
         BinaryClient = require('Binary').BinaryClient,
         connectionID = require('shortid').generate(),
         extend = require('extend'),
-        options = { write:true };
+        options = { /* defaults */ };
     
     extend(options, opts);
-
-
 
     // set client id for service that will be written to
     var client = BinaryClient( 'ws://' + service + '?id=', {'connectionID' : connectionID} );
@@ -4144,9 +4133,10 @@ var file = function(service, fileObj, callback, opts) {
     })
 
     // fires when stream is ready write
-    client.on('stream', function(stream, opts) {              
-        callback(stream);
-        if (options.write) {            
+    client.on('stream', function(stream, opts) {                      
+        if (options.writeStream) 
+            options.writeStream(stream)
+        else {
             var reader = new FileReader();               
             reader.onload = function(evt) { stream.write(evt.target.result); }
             reader.onloadend = function(evt) { stream.end(); }             
@@ -4157,9 +4147,9 @@ var file = function(service, fileObj, callback, opts) {
     return  encodeURIComponent("http://client?&id="+connectionID) ;
 }
 
-
 module.exports = file;
 },{"Binary":2,"extend":8,"shortid":13}],23:[function(require,module,exports){
+// Create iobio url for a url command
 
 var url = function(param) {	
 	var p = 'http' + param.slice(5,param.length);
