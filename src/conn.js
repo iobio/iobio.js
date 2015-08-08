@@ -34,6 +34,7 @@ inherits(conn, EventEmitter);
 conn.prototype.run = function() {
 	// run
 	var runner = new this.Runner(this.urlBuilder, this.opts);
+	var me = this;
 
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this,runner);

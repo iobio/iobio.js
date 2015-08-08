@@ -28,6 +28,8 @@ iobio.cmd = function(service, params, opts) {
 
 	var conn = require('./conn.js'); // handles connection code		
 	this.connection = new conn(this.protocol, service, params, this.options);
+	var me = this;
+	
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this, this.connection);
 }
@@ -3797,6 +3799,7 @@ inherits(conn, EventEmitter);
 conn.prototype.run = function() {
 	// run
 	var runner = new this.Runner(this.urlBuilder, this.opts);
+	var me = this;
 
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this,runner);
@@ -3823,25 +3826,23 @@ var ws = function(urlBuilder, opts) {
 		client.on('open', function(stream){
 			var stream = client.createStream({event:'run', params : {'url':wsUrl}});    
 
-			stream.on('createClientConnection', function(connection) {
+			stream.on('createClientConnection', function(connection) {				
 				var serverAddress = connection.serverAddress || urlBuilder.getService();
 				var dataClient = BinaryClient('ws://' + serverAddress);
-				dataClient.on('open', function() {
+				dataClient.on('open', function() {					
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
 					if (opts.writeStream) 
 						opts.writeStream(dataStream, function() { dataStream.end();} )
 					else {
 						var reader = new FileReader();               
-						reader.onload = function(evt) { 							
-							dataStream.write(evt.target.result); 
-						}
+						reader.onload = function(evt) { dataStream.write(evt.target.result); }						
 						reader.onloadend = function(evt) { dataStream.end(); }             
 						reader.readAsBinaryString( urlBuilder.getFile() );
 					}
 				})
             })      
 			
-			stream.on('data', function(data, options) {
+			stream.on('data', function(data, options) {				
 				me.emit('data', data);
 			});
 

@@ -26,6 +26,8 @@ iobio.cmd = function(service, params, opts) {
 
 	var conn = require('./conn.js'); // handles connection code		
 	this.connection = new conn(this.protocol, service, params, this.options);
+	var me = this;
+	
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this, this.connection);
 }
