@@ -1,6 +1,6 @@
 // Creates the command
 
-var cmdBuilder = function(service, params, opts) {	
+var urlBuilder = function(service, params, opts) {	
 	var urlParams = require('./utils/hash2UrlParams.js'),
 		eventEmitter = require('events').EventEmitter(),
 		fileParamer = require('./source/file.js'),
@@ -9,6 +9,7 @@ var cmdBuilder = function(service, params, opts) {
 		opts = opts || {};
 
 	this.source = null;
+	this.service = service;
 	var me = this;	
 
 	// handle iobio urls and files to correct
@@ -18,7 +19,8 @@ var cmdBuilder = function(service, params, opts) {
 			params[i] = urlParamer(params[i]);			
 		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
 			sourceType = 'file';			
-			params[i] = fileParamer(service, params[i], opts);			
+			me.file = params[i];
+			params[i] = fileParamer(params[i]);			
 		}
 	}
 
@@ -27,12 +29,7 @@ var cmdBuilder = function(service, params, opts) {
 	if (sourceType == 'file') this.source += '&protocol=websocket';
 }
 
-cmdBuilder.prototype.getSource = function() {
-	return this.source;
-}
+urlBuilder.prototype.getFile = function() { return this.file; }
+urlBuilder.prototype.getService = function() { return this.service; }
 
-cmdBuilder.prototype.url = function() {
-	return 'http://' + this.source;
-}
-
-module.exports = cmdBuilder;
+module.exports = urlBuilder;

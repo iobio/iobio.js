@@ -17,13 +17,17 @@ iobio.cmd = function(service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
-		extend = require('extend');
+	// var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
+	var extend = require('extend');
 	
    	this.options = { /* defaults */ };
    	extend(this.options, opts);      	
-	this.protocol = 'ws';	
-	this.command = new cmdBuilder(service,params,opts);
+	this.protocol = 'ws';		
+
+	var conn = require('./conn.js'); // handles connection code		
+	this.connection = new conn(this.protocol, service, params, this.options);
+	// bind stream events	
+	require('./utils/bindStreamEvents')(this, this.connection);
 }
 
 // inherit eventEmitter
@@ -38,18 +42,20 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 	params.push(this.url())
 	
 	// generate base url
-	var cmdBuilder = require('./cmdBuilder.js');
+	var conn = require('./conn');
 	if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
-	this.command = new cmdBuilder( service, params, opts );	
+	this.connection = new conn( this.protocol, service, params, opts );	
+	
+	// bind stream events	
+	require('./utils/bindStreamEvents')(this, this.connection);
+	
 	return this;
 }
 
 // Create url
-iobio.cmd.prototype.url = function() { return 'iobio://' + this.command.getSource(); }
-// Create http
-iobio.cmd.prototype.http = function() { return 'http://' + this.command.getSource(); }
-// Create ws
-iobio.cmd.prototype.ws = function() { return 'ws://' + this.command.getSource(); }
+iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.source; }
+iobio.cmd.prototype.http = function() { return 'http://' + this.connection.source; }
+iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.source; }
 
 
 // getters/setters
@@ -60,14 +66,8 @@ iobio.cmd.prototype.protocol = function(_) {
 }
 
 // Execute command
-iobio.cmd.prototype.run = function() {
-	var me = this,
-		conn = require('./conn.js'), // handles connection code		
-		connection = new conn(this.protocol, this.command.getSource(), this.opts);
-
-	// bind events
-	require('./utils/bindStreamEvents')(this,connection);
+iobio.cmd.prototype.run = function() {	
 
  	// run 
-	connection.run();
+	this.connection.run();
 }

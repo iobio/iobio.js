@@ -19,13 +19,17 @@ iobio.cmd = function(service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
-		extend = require('extend');
+	// var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
+	var extend = require('extend');
 	
    	this.options = { /* defaults */ };
    	extend(this.options, opts);      	
-	this.protocol = 'ws';	
-	this.command = new cmdBuilder(service,params,opts);
+	this.protocol = 'ws';		
+
+	var conn = require('./conn.js'); // handles connection code		
+	this.connection = new conn(this.protocol, service, params, this.options);
+	// bind stream events	
+	require('./utils/bindStreamEvents')(this, this.connection);
 }
 
 // inherit eventEmitter
@@ -40,18 +44,20 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 	params.push(this.url())
 	
 	// generate base url
-	var cmdBuilder = require('./cmdBuilder.js');
+	var conn = require('./conn');
 	if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
-	this.command = new cmdBuilder( service, params, opts );	
+	this.connection = new conn( this.protocol, service, params, opts );	
+	
+	// bind stream events	
+	require('./utils/bindStreamEvents')(this, this.connection);
+	
 	return this;
 }
 
 // Create url
-iobio.cmd.prototype.url = function() { return 'iobio://' + this.command.getSource(); }
-// Create http
-iobio.cmd.prototype.http = function() { return 'http://' + this.command.getSource(); }
-// Create ws
-iobio.cmd.prototype.ws = function() { return 'ws://' + this.command.getSource(); }
+iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.source; }
+iobio.cmd.prototype.http = function() { return 'http://' + this.connection.source; }
+iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.source; }
 
 
 // getters/setters
@@ -62,20 +68,14 @@ iobio.cmd.prototype.protocol = function(_) {
 }
 
 // Execute command
-iobio.cmd.prototype.run = function() {
-	var me = this,
-		conn = require('./conn.js'), // handles connection code		
-		connection = new conn(this.protocol, this.command.getSource(), this.opts);
-
-	// bind events
-	require('./utils/bindStreamEvents')(this,connection);
+iobio.cmd.prototype.run = function() {	
 
  	// run 
-	connection.run();
+	this.connection.run();
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./cmdBuilder.js":18,"./conn.js":19,"./utils/bindStreamEvents":24,"events":7,"extend":8,"inherits":9}],2:[function(require,module,exports){
+},{"./conn":10,"./conn.js":10,"./utils/bindStreamEvents":16,"events":7,"extend":8,"inherits":9}],2:[function(require,module,exports){
 (function (Buffer){
 /*! binary.js build:0.2.1, development. Copyright(c) 2012 Eric Zhang <eric@ericzhang.com> MIT Licensed */
 (function(exports){
@@ -708,7 +708,7 @@ EventEmitter.prototype.addListener = function(type, listener, scope, once) {
     // Adding the second element, need to change to array.
     this._events[type] = [this._events[type], listener];
   }
-  
+  return this;
 };
 
 EventEmitter.prototype.on = EventEmitter.prototype.addListener;
@@ -884,6 +884,7 @@ var util = {
   }(this))
 };
 
+exports.util = util;
 
 
 function Stream() {
@@ -976,6 +977,8 @@ Stream.prototype.pipe = function(dest, options) {
   // Allow for unix-like usage: A.pipe(B).pipe(C)
   return dest;
 };
+
+exports.Stream = Stream;
 function BlobReadStream(source, options){
   Stream.call(this);
   
@@ -1331,6 +1334,10 @@ BinaryStream.prototype._onError = function(error){
   this.emit('error', error);
 };
 
+BinaryStream.prototype._onCreateClientConnection = function(connection){
+  this.emit('createClientConnection', connection);
+};
+
 // Write stream
 
 BinaryStream.prototype._onPause = function() {
@@ -1359,7 +1366,8 @@ BinaryStream.prototype.write = function(data) {
     var out = this._write(2, data, this.id);
     return !this.paused && out;
   } else {
-    throw new Error('Stream is not writable');
+    this.emit('error', new Error('Stream is not writable'));
+    return false;
   }
 };
 
@@ -1367,6 +1375,17 @@ BinaryStream.prototype.end = function() {
   this._ended = true;
   this.readable = false;
   this._write(5, null, this.id);
+};
+
+BinaryStream.prototype.error = function(error) {
+  this._ended = true;
+  this.readable = false;
+  this._write(7, error, this.id);
+};
+
+
+BinaryStream.prototype.createClientConnection = function(connection) {
+  this._write(8, connection, this.id);
 };
 
 BinaryStream.prototype.destroy = BinaryStream.prototype.destroySoon = function() {
@@ -1547,6 +1566,26 @@ function BinaryClient(socket, options) {
             self.emit('error', new Error('Received `close` message for unknown stream: ' + streamId));
           }
           break;
+        case 7:
+          var error = data[1];
+          var streamId = data[2];
+          var binaryStream = self.streams[streamId];
+          if(binaryStream) {
+            binaryStream._onError(error);
+          } else {
+            self.emit('error', new Error('Received `error` message for unknown stream: ' + streamId));
+          }
+          break;
+        case 8:
+          var connection = data[1];
+          var streamId = data[2];          
+          var binaryStream = self.streams[streamId];          
+          if(binaryStream) {
+            binaryStream._onCreateClientConnection(connection);
+          } else {
+            self.emit('error', new Error('Received `error` message for unknown stream: ' + streamId));
+          }
+          break;          
         default:
           self.emit('error', new Error('Unrecognized message type received: ' + data[0]));
       }
@@ -3722,368 +3761,26 @@ if (typeof Object.create === 'function') {
 }
 
 },{}],10:[function(require,module,exports){
-'use strict';
-
-var randomFromSeed = require('./random/random-from-seed');
-
-var ORIGINAL = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-';
-var alphabet;
-var previousSeed;
-
-var shuffled;
-
-function reset() {
-    shuffled = false;
-}
-
-function setCharacters(_alphabet_) {
-    if (!_alphabet_) {
-        if (alphabet !== ORIGINAL) {
-            alphabet = ORIGINAL;
-            reset();
-        }
-        return;
-    }
-
-    if (_alphabet_ === alphabet) {
-        return;
-    }
-
-    if (_alphabet_.length !== ORIGINAL.length) {
-        throw new Error('Custom alphabet for shortid must be ' + ORIGINAL.length + ' unique characters. You submitted ' + _alphabet_.length + ' characters: ' + _alphabet_);
-    }
-
-    var unique = _alphabet_.split('').filter(function(item, ind, arr){
-       return ind !== arr.lastIndexOf(item);
-    });
-
-    if (unique.length) {
-        throw new Error('Custom alphabet for shortid must be ' + ORIGINAL.length + ' unique characters. These characters were not unique: ' + unique.join(', '));
-    }
-
-    alphabet = _alphabet_;
-    reset();
-}
-
-function characters(_alphabet_) {
-    setCharacters(_alphabet_);
-    return alphabet;
-}
-
-function setSeed(seed) {
-    randomFromSeed.seed(seed);
-    if (previousSeed !== seed) {
-        reset();
-        previousSeed = seed;
-    }
-}
-
-function shuffle() {
-    if (!alphabet) {
-        setCharacters(ORIGINAL);
-    }
-
-    var sourceArray = alphabet.split('');
-    var targetArray = [];
-    var r = randomFromSeed.nextValue();
-    var characterIndex;
-
-    while (sourceArray.length > 0) {
-        r = randomFromSeed.nextValue();
-        characterIndex = Math.floor(r * sourceArray.length);
-        targetArray.push(sourceArray.splice(characterIndex, 1)[0]);
-    }
-    return targetArray.join('');
-}
-
-function getShuffled() {
-    if (shuffled) {
-        return shuffled;
-    }
-    shuffled = shuffle();
-    return shuffled;
-}
-
-/**
- * lookup shuffled letter
- * @param index
- * @returns {string}
- */
-function lookup(index) {
-    var alphabetShuffled = getShuffled();
-    return alphabetShuffled[index];
-}
-
-module.exports = {
-    characters: characters,
-    seed: setSeed,
-    lookup: lookup,
-    shuffled: getShuffled
-};
-
-},{"./random/random-from-seed":16}],11:[function(require,module,exports){
-'use strict';
-var alphabet = require('./alphabet');
-
-/**
- * Decode the id to get the version and worker
- * Mainly for debugging and testing.
- * @param id - the shortid-generated id.
- */
-function decode(id) {
-    var characters = alphabet.shuffled();
-    return {
-        version: characters.indexOf(id.substr(0, 1)) & 0x0f,
-        worker: characters.indexOf(id.substr(1, 1)) & 0x0f
-    };
-}
-
-module.exports = decode;
-
-},{"./alphabet":10}],12:[function(require,module,exports){
-'use strict';
-
-var randomByte = require('./random/random-byte');
-
-function encode(lookup, number) {
-    var loopCounter = 0;
-    var done;
-
-    var str = '';
-
-    while (!done) {
-        str = str + lookup( ( (number >> (4 * loopCounter)) & 0x0f ) | randomByte() );
-        done = number < (Math.pow(16, loopCounter + 1 ) );
-        loopCounter++;
-    }
-    return str;
-}
-
-module.exports = encode;
-
-},{"./random/random-byte":15}],13:[function(require,module,exports){
-'use strict';
-
-var alphabet = require('./alphabet');
-var encode = require('./encode');
-var decode = require('./decode');
-var isValid = require('./is-valid');
-
-// Ignore all milliseconds before a certain time to reduce the size of the date entropy without sacrificing uniqueness.
-// This number should be updated every year or so to keep the generated id short.
-// To regenerate `new Date() - 0` and bump the version. Always bump the version!
-var REDUCE_TIME = 1426452414093;
-
-// don't change unless we change the algos or REDUCE_TIME
-// must be an integer and less than 16
-var version = 5;
-
-// if you are using cluster or multiple servers use this to make each instance
-// has a unique value for worker
-// Note: I don't know if this is automatically set when using third
-// party cluster solutions such as pm2.
-var clusterWorkerId = require('./util/cluster-worker-id') || 0;
-
-// Counter is used when shortid is called multiple times in one second.
-var counter;
-
-// Remember the last time shortid was called in case counter is needed.
-var previousSeconds;
-
-/**
- * Generate unique id
- * Returns string id
- */
-function generate() {
-
-    var str = '';
-
-    var seconds = Math.floor((Date.now() - REDUCE_TIME) * 0.001);
-
-    if (seconds === previousSeconds) {
-        counter++;
-    } else {
-        counter = 0;
-        previousSeconds = seconds;
-    }
-
-    str = str + encode(alphabet.lookup, version);
-    str = str + encode(alphabet.lookup, clusterWorkerId);
-    if (counter > 0) {
-        str = str + encode(alphabet.lookup, counter);
-    }
-    str = str + encode(alphabet.lookup, seconds);
-
-    return str;
-}
-
-
-/**
- * Set the seed.
- * Highly recommended if you don't want people to try to figure out your id schema.
- * exposed as shortid.seed(int)
- * @param seed Integer value to seed the random alphabet.  ALWAYS USE THE SAME SEED or you might get overlaps.
- */
-function seed(seedValue) {
-    alphabet.seed(seedValue);
-    return module.exports;
-}
-
-/**
- * Set the cluster worker or machine id
- * exposed as shortid.worker(int)
- * @param workerId worker must be positive integer.  Number less than 16 is recommended.
- * returns shortid module so it can be chained.
- */
-function worker(workerId) {
-    clusterWorkerId = workerId;
-    return module.exports;
-}
-
-/**
- *
- * sets new characters to use in the alphabet
- * returns the shuffled alphabet
- */
-function characters(newCharacters) {
-    if (newCharacters !== undefined) {
-        alphabet.characters(newCharacters);
-    }
-
-    return alphabet.shuffled();
-}
-
-
-// Export all other functions as properties of the generate function
-module.exports = generate;
-module.exports.generate = generate;
-module.exports.seed = seed;
-module.exports.worker = worker;
-module.exports.characters = characters;
-module.exports.decode = decode;
-module.exports.isValid = isValid;
-
-},{"./alphabet":10,"./decode":11,"./encode":12,"./is-valid":14,"./util/cluster-worker-id":17}],14:[function(require,module,exports){
-'use strict';
-var alphabet = require('./alphabet');
-
-function isShortId(id) {
-    if (!id || typeof id !== 'string' || id.length < 6 ) {
-        return false;
-    }
-
-    var characters = alphabet.characters();
-    var invalidCharacters = id.split('').map(function(char){
-        if (characters.indexOf(char) === -1) {
-            return char;
-        }
-    }).join('').split('').join('');
-
-    return invalidCharacters.length === 0;
-}
-
-module.exports = isShortId;
-
-},{"./alphabet":10}],15:[function(require,module,exports){
-'use strict';
-
-var crypto = window.crypto || window.msCrypto; // IE 11 uses window.msCrypto
-
-function randomByte() {
-    if (!crypto || !crypto.getRandomValues) {
-        return Math.floor(Math.random() * 256) & 0x30;
-    }
-    var dest = new Uint8Array(1);
-    crypto.getRandomValues(dest);
-    return dest[0] & 0x30;
-}
-
-module.exports = randomByte;
-
-},{}],16:[function(require,module,exports){
-'use strict';
-
-// Found this seed-based random generator somewhere
-// Based on The Central Randomizer 1.3 (C) 1997 by Paul Houle (houle@msc.cornell.edu)
-
-var seed = 1;
-
-/**
- * return a random number based on a seed
- * @param seed
- * @returns {number}
- */
-function getNextValue() {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed/(233280.0);
-}
-
-function setSeed(_seed_) {
-    seed = _seed_;
-}
-
-module.exports = {
-    nextValue: getNextValue,
-    seed: setSeed
-};
-
-},{}],17:[function(require,module,exports){
-'use strict';
-
-module.exports = 0;
-
-},{}],18:[function(require,module,exports){
-// Creates the command
-
-var cmdBuilder = function(service, params, opts) {	
-	var urlParams = require('./utils/hash2UrlParams.js'),
-		eventEmitter = require('events').EventEmitter(),
-		fileParamer = require('./source/file.js'),
-		urlParamer = require('./source/url.js'),
-		sourceType
-		opts = opts || {};
-
-	this.source = null;
-	var me = this;	
-
-	// handle iobio urls and files to correct
-	for (var i=0; i< params.length; i++) {					
-		if(params[i].slice(0,8) == 'iobio://') {
-			sourceType = 'url'
-			params[i] = urlParamer(params[i]);			
-		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
-			sourceType = 'file';			
-			params[i] = fileParamer(service, params[i], opts);			
-		}
-	}
-
-	// create source url
-	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams));		
-	if (sourceType == 'file') this.source += '&protocol=websocket';
-}
-
-cmdBuilder.prototype.getSource = function() {
-	return this.source;
-}
-
-cmdBuilder.prototype.url = function() {
-	return 'http://' + this.source;
-}
-
-module.exports = cmdBuilder;
-},{"./source/file.js":22,"./source/url.js":23,"./utils/hash2UrlParams.js":25,"events":7}],19:[function(require,module,exports){
 // Create connection and handle the results
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
-var conn = function(protocol, url, opts) {	
+var conn = function(protocol, service, params, opts) {	
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
 	var me = this;	
 	this.opts = opts;
-	this.url = url	
+	this.service = service;
+	this.protocol = protocol;
+	this.params = params;	
+
+	// create url	
+	var UrlBuilder = require('./urlBuilder.js');
+	var	urlBuilder = new UrlBuilder(service, params, opts);
+	this.urlBuilder = urlBuilder;
+	this.source = urlBuilder.source;
 
 	if (protocol == 'ws')
 		this.Runner  = require('./protocol/ws.js');
@@ -4099,32 +3796,50 @@ inherits(conn, EventEmitter);
 // Run command on connection
 conn.prototype.run = function() {
 	// run
-	var runner = new this.Runner(this.url,this.opts);
+	var runner = new this.Runner(this.urlBuilder, this.opts);
 
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this,runner);
 }
 
 module.exports = conn;
-},{"./protocol/http.js":20,"./protocol/ws.js":21,"./utils/bindStreamEvents":24,"events":7,"inherits":9}],20:[function(require,module,exports){
+},{"./protocol/http.js":11,"./protocol/ws.js":12,"./urlBuilder.js":15,"./utils/bindStreamEvents":16,"events":7,"inherits":9}],11:[function(require,module,exports){
 
-},{}],21:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // Websocket code for running iobio command and getting results
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
-var ws = function(url,opts) {
+var ws = function(urlBuilder, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var wsUrl = 'ws://' + url,
-		BinaryClient = require('Binary').BinaryClient,
+	var wsUrl = 'ws://' + urlBuilder.source,
+		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
 		me = this;                
 
 		client.on('open', function(stream){
-			var stream = client.createStream({event:'run', params : {'url':wsUrl}});          
+			var stream = client.createStream({event:'run', params : {'url':wsUrl}});    
+
+			stream.on('createClientConnection', function(connection) {
+				var serverAddress = connection.serverAddress || urlBuilder.getService();
+				var dataClient = BinaryClient('ws://' + serverAddress);
+				dataClient.on('open', function() {
+					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
+					if (opts.writeStream) 
+						opts.writeStream(dataStream, function() { dataStream.end();} )
+					else {
+						var reader = new FileReader();               
+						reader.onload = function(evt) { 							
+							dataStream.write(evt.target.result); 
+						}
+						reader.onloadend = function(evt) { dataStream.end(); }             
+						reader.readAsBinaryString( urlBuilder.getFile() );
+					}
+				})
+            })      
 			
 			stream.on('data', function(data, options) {
 				me.emit('data', data);
@@ -4144,42 +3859,60 @@ var ws = function(url,opts) {
 inherits(ws, EventEmitter);
 
 module.exports = ws;
-},{"Binary":2,"events":7,"inherits":9}],22:[function(require,module,exports){
+},{"binaryjs":2,"events":7,"inherits":9}],13:[function(require,module,exports){
 // Create iobio url for a file command and setup stream for reading the file to the iobio web service
 
-var file = function(service, fileObj, opts) {   
-    var me = this,
-        BinaryClient = require('Binary').BinaryClient,
-        connectionID = require('shortid').generate(),
-        extend = require('extend'),
-        options = { /* defaults */ };
+// var file = function(service, fileObj, opts) {   
+//     var me = this,
+//         BinaryClient = require('binaryjs').BinaryClient,
+//         connectionID = require('shortid').generate(),
+//         extend = require('extend'),
+//         options = { /* defaults */ };
     
-    extend(options, opts);
+//     extend(options, opts);
 
-    // set client id for service that will be written to
-    var client = BinaryClient( 'ws://' + service + '?id=', {'connectionID' : connectionID} );
-    client.on('open', function(stream){
-        var stream = client.createStream({event:'setID', 'connectionID':connectionID});
-        stream.end();
-    })
+//     // set client id for service that will be written to
+//     var client = BinaryClient( 'ws://' + service + '?id=', {'connectionID' : connectionID} );
+//     client.on('open', function(stream){
+//         var stream = client.createStream({event:'setID', 'connectionID':connectionID});
+//         stream.end();
+//     })
 
-    // fires when stream is ready write
-    client.on('stream', function(stream, opts) {                      
-        if (options.writeStream) 
-            options.writeStream(stream, function() {stream.end()})
-        else {
-            var reader = new FileReader();               
-            reader.onload = function(evt) { stream.write(evt.target.result); }
-            reader.onloadend = function(evt) { stream.end(); }             
-            reader.readAsBinaryString(fileObj);
-        }
-    })
+//     // fires when stream is ready write
+//     client.on('stream', function(stream, opts) {                      
+//         if (options.writeStream) 
+//             options.writeStream(stream, function() {stream.end()})
+//         else {
+//             var reader = new FileReader();               
+//             reader.onload = function(evt) { stream.write(evt.target.result); }
+//             reader.onloadend = function(evt) { stream.end(); }             
+//             reader.readAsBinaryString(fileObj);
+//         }
+//     })
 
-    return  encodeURIComponent("http://client?&id="+connectionID) ;
+//     return  encodeURIComponent("http://client?&id="+connectionID);
+// }
+
+var file = function(fileObj) {       
+    var me = this;
+    me.fileObj = fileObj;
+
+    return  encodeURIComponent("http://client");
+}
+
+file.prototype.write = function(stream, options) {
+    if (options && options.writeStream) 
+        options.writeStream(stream, function() {stream.end()})
+    else {
+        var reader = new FileReader();               
+        reader.onload = function(evt) { stream.write(evt.target.result); }
+        reader.onloadend = function(evt) { stream.end(); }             
+        reader.readAsBinaryString(me.fileObj);
+    }
 }
 
 module.exports = file;
-},{"Binary":2,"extend":8,"shortid":13}],23:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // Create iobio url for a url command
 
 var url = function(param) {	
@@ -4189,16 +3922,52 @@ var url = function(param) {
 }
 
 module.exports = url;
-},{}],24:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
+// Creates the command
+
+var urlBuilder = function(service, params, opts) {	
+	var urlParams = require('./utils/hash2UrlParams.js'),
+		eventEmitter = require('events').EventEmitter(),
+		fileParamer = require('./source/file.js'),
+		urlParamer = require('./source/url.js'),
+		sourceType
+		opts = opts || {};
+
+	this.source = null;
+	this.service = service;
+	var me = this;	
+
+	// handle iobio urls and files to correct
+	for (var i=0; i< params.length; i++) {					
+		if(params[i].slice(0,8) == 'iobio://') {
+			sourceType = 'url'
+			params[i] = urlParamer(params[i]);			
+		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
+			sourceType = 'file';			
+			me.file = params[i];
+			params[i] = fileParamer(params[i]);			
+		}
+	}
+
+	// create source url
+	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams));		
+	if (sourceType == 'file') this.source += '&protocol=websocket';
+}
+
+urlBuilder.prototype.getFile = function() { return this.file; }
+urlBuilder.prototype.getService = function() { return this.service; }
+
+module.exports = urlBuilder;
+},{"./source/file.js":13,"./source/url.js":14,"./utils/hash2UrlParams.js":17,"events":7}],16:[function(require,module,exports){
 var bindStreamEvents = function(parent, child) {
 	// handle events
 	child.on('data', function(data) { parent.emit('data',data)});
 	child.on('end',   function() { parent.emit('end')});
-	child.on('error', function(error) { parent.emit('error',error)});
+	child.on('error', function(error) { parent.emit('error',error)});	
 }
 
 module.exports = bindStreamEvents;	
-},{}],25:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var urlParams = function(params) {
 	var str = ''
 	if (params)

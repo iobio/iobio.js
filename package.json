@@ -2,10 +2,8 @@
   "name": "iobio.js",
   "version": "0.1.0",
   "description": "Client side iobio javascript library for building and executing iobio commands",
-  "main": "./src/cmd.js",
   "browser": {
-    "Binary": "./lib/binary.js",
-    "iobiojs": "./iobio.min.js"
+    "binaryjs": "./lib/binary.js"
   },
   "browserify-shim": {
     "external": "global:External"
@@ -19,7 +17,6 @@
     "gulp": "^3.8.11",
     "gulp-sourcemaps": "^1.5.2",
     "gulp-uglify": "^1.2.0",
-    "gulp-util": "^3.0.4",
     "karma": "^0.12.31",
     "karma-browserify": "^4.1.2",
     "karma-chrome-launcher": "^0.1.7",

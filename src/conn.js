@@ -3,13 +3,21 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
-var conn = function(protocol, url, opts) {	
+var conn = function(protocol, service, params, opts) {	
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
 	var me = this;	
 	this.opts = opts;
-	this.url = url	
+	this.service = service;
+	this.protocol = protocol;
+	this.params = params;	
+
+	// create url	
+	var UrlBuilder = require('./urlBuilder.js');
+	var	urlBuilder = new UrlBuilder(service, params, opts);
+	this.urlBuilder = urlBuilder;
+	this.source = urlBuilder.source;
 
 	if (protocol == 'ws')
 		this.Runner  = require('./protocol/ws.js');
@@ -25,7 +33,7 @@ inherits(conn, EventEmitter);
 // Run command on connection
 conn.prototype.run = function() {
 	// run
-	var runner = new this.Runner(this.url,this.opts);
+	var runner = new this.Runner(this.urlBuilder, this.opts);
 
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this,runner);
