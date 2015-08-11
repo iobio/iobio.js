@@ -24,6 +24,13 @@ To use simply download iobio.min.js and include in your html
 	// do stuff with results here
  })
 
+ // Catch error event when fired 
+ // It's important to catch error events or your iobio command will probably throw an error and fail as 
+ // some programs write to stderr and will bubble up the chain back here.
+ cmd.on('error', function(error) {
+	// handle or log error
+ })
+
  // execute command
  cmd.run();
 ```
