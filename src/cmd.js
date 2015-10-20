@@ -24,6 +24,9 @@ iobio.cmd = function(service, params, opts) {
    	extend(this.options, opts);      	
 	this.protocol = 'ws';		
 
+	// make sure params isn't undefined
+	params = params || [];
+
 	var conn = require('./conn.js'); // handles connection code		
 	this.connection = new conn(this.protocol, service, params, this.options);
 	var me = this;
@@ -39,19 +42,23 @@ inherits(iobio.cmd, EventEmitter);
 
 // Chain commands
 iobio.cmd.prototype.pipe = function(service, params, opts) {	
+	
+	
+	// add current url to params		
+	params = params || [];
+	params.push( this.url() );
 
-	// add current url to params
-	params.push(this.url())
+	var newCmd = new iobio.cmd(service, params, opts);
 	
 	// generate base url
-	var conn = require('./conn');
-	if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
-	this.connection = new conn( this.protocol, service, params, opts );	
+	// var conn = require('./conn');
+	// if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
+	// newCmd.connection = new conn( this.protocol, service, params, opts );	
 	
-	// bind stream events	
-	require('./utils/bindStreamEvents')(this, this.connection);
+	// // bind stream events	
+	// require('./utils/bindStreamEvents')(newCmd, newCmd.connection);
 	
-	return this;
+	return newCmd;
 }
 
 // Create url

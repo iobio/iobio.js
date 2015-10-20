@@ -26,6 +26,9 @@ iobio.cmd = function(service, params, opts) {
    	extend(this.options, opts);      	
 	this.protocol = 'ws';		
 
+	// make sure params isn't undefined
+	params = params || [];
+
 	var conn = require('./conn.js'); // handles connection code		
 	this.connection = new conn(this.protocol, service, params, this.options);
 	var me = this;
@@ -41,19 +44,23 @@ inherits(iobio.cmd, EventEmitter);
 
 // Chain commands
 iobio.cmd.prototype.pipe = function(service, params, opts) {	
+	
+	
+	// add current url to params		
+	params = params || [];
+	params.push( this.url() );
 
-	// add current url to params
-	params.push(this.url())
+	var newCmd = new iobio.cmd(service, params, opts);
 	
 	// generate base url
-	var conn = require('./conn');
-	if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
-	this.connection = new conn( this.protocol, service, params, opts );	
+	// var conn = require('./conn');
+	// if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
+	// newCmd.connection = new conn( this.protocol, service, params, opts );	
 	
-	// bind stream events	
-	require('./utils/bindStreamEvents')(this, this.connection);
+	// // bind stream events	
+	// require('./utils/bindStreamEvents')(newCmd, newCmd.connection);
 	
-	return this;
+	return newCmd;
 }
 
 // Create url
@@ -77,7 +84,7 @@ iobio.cmd.prototype.run = function() {
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./conn":10,"./conn.js":10,"./utils/bindStreamEvents":16,"events":7,"extend":8,"inherits":9}],2:[function(require,module,exports){
+},{"./conn.js":10,"./utils/bindStreamEvents":16,"events":7,"extend":8,"inherits":9}],2:[function(require,module,exports){
 (function (Buffer){
 /*! binary.js build:0.2.1, development. Copyright(c) 2012 Eric Zhang <eric@ericzhang.com> MIT Licensed */
 (function(exports){
@@ -3862,37 +3869,6 @@ inherits(ws, EventEmitter);
 module.exports = ws;
 },{"binaryjs":2,"events":7,"inherits":9}],13:[function(require,module,exports){
 // Create iobio url for a file command and setup stream for reading the file to the iobio web service
-
-// var file = function(service, fileObj, opts) {   
-//     var me = this,
-//         BinaryClient = require('binaryjs').BinaryClient,
-//         connectionID = require('shortid').generate(),
-//         extend = require('extend'),
-//         options = { /* defaults */ };
-    
-//     extend(options, opts);
-
-//     // set client id for service that will be written to
-//     var client = BinaryClient( 'ws://' + service + '?id=', {'connectionID' : connectionID} );
-//     client.on('open', function(stream){
-//         var stream = client.createStream({event:'setID', 'connectionID':connectionID});
-//         stream.end();
-//     })
-
-//     // fires when stream is ready write
-//     client.on('stream', function(stream, opts) {                      
-//         if (options.writeStream) 
-//             options.writeStream(stream, function() {stream.end()})
-//         else {
-//             var reader = new FileReader();               
-//             reader.onload = function(evt) { stream.write(evt.target.result); }
-//             reader.onloadend = function(evt) { stream.end(); }             
-//             reader.readAsBinaryString(fileObj);
-//         }
-//     })
-
-//     return  encodeURIComponent("http://client?&id="+connectionID);
-// }
 
 var file = function(fileObj) {       
     var me = this;
