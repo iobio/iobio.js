@@ -41,7 +41,11 @@ var ws = function(urlBuilder, opts) {
 
 			stream.on('error', function(error) {
 				me.emit('error', error);
-			})      
+			})  
+
+			stream.on('queue', function(queue) {				
+				me.emit('queue', queue)
+			})    
 		});
 }
 

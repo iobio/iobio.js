@@ -1293,6 +1293,16 @@ function onFull(buffer, extraSize, callback){
 */
 exports.BlobReadStream = BlobReadStream;
 
+function genGuid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+    s4() + '-' + s4() + s4() + s4();
+}
+
 function BinaryStream(socket, id, create, meta) {
   if (!(this instanceof BinaryStream)) return new BinaryStream(options);
   
@@ -1302,6 +1312,7 @@ function BinaryStream(socket, id, create, meta) {
 
   
   this.id = id;
+  this.guid = genGuid();
   this._socket = socket;
     
   this.writable = true;
@@ -1313,12 +1324,14 @@ function BinaryStream(socket, id, create, meta) {
   
   if(create) {
     // This is a stream we are creating
+    meta.guid = self.guid;
     this._write(1, meta, this.id);
   }
 }
 
 util.inherits(BinaryStream, Stream);
 
+BinaryStream.prototype.guid = undefined;
 
 BinaryStream.prototype._onDrain = function() {
   if(!this.paused) {
@@ -1341,6 +1354,10 @@ BinaryStream.prototype._onError = function(error){
   this.readable = false;
   this.writable = false;
   this.emit('error', error);
+};
+
+BinaryStream.prototype._onMessage = function(event, msg){    
+  this.emit(event, msg);
 };
 
 BinaryStream.prototype._onCreateClientConnection = function(connection){
@@ -1395,6 +1412,10 @@ BinaryStream.prototype.error = function(error) {
 
 BinaryStream.prototype.createClientConnection = function(connection) {
   this._write(8, connection, this.id);
+};
+
+BinaryStream.prototype.message = function(event, msg) {    
+  this._write(9, [event, msg], this.id);
 };
 
 BinaryStream.prototype.destroy = BinaryStream.prototype.destroySoon = function() {
@@ -1526,7 +1547,7 @@ function BinaryClient(socket, options) {
         case 1:
           var meta = data[1];
           var streamId = data[2];
-          var binaryStream = self._receiveStream(streamId);
+          var binaryStream = self._receiveStream(streamId, meta.guid);
           self.emit('stream', binaryStream, meta);
           break;
         case 2:
@@ -1594,7 +1615,18 @@ function BinaryClient(socket, options) {
           } else {
             self.emit('error', new Error('Received `error` message for unknown stream: ' + streamId));
           }
-          break;          
+          break; 
+        case 9:          
+          var event = data[1][0];
+          var msg = data[1][1];
+          var streamId = data[2];          
+          var binaryStream = self.streams[streamId];          
+          if(binaryStream) {            
+            binaryStream._onMessage(event, msg);
+          } else {
+            self.emit('error', new Error('Received `error` message for unknown stream: ' + streamId));
+          }
+          break;                   
         default:
           self.emit('error', new Error('Unrecognized message type received: ' + data[0]));
       }
@@ -1651,9 +1683,10 @@ BinaryClient.prototype.send = function(data, meta){
   return stream;
 };
 
-BinaryClient.prototype._receiveStream = function(streamId){
+BinaryClient.prototype._receiveStream = function(streamId, guid){
   var self = this;
   var binaryStream = new BinaryStream(this._socket, streamId, false);
+  binaryStream.guid = guid;
   binaryStream.on('close', function(){
     delete self.streams[streamId];
   });
@@ -3859,7 +3892,11 @@ var ws = function(urlBuilder, opts) {
 
 			stream.on('error', function(error) {
 				me.emit('error', error);
-			})      
+			})  
+
+			stream.on('queue', function(queue) {				
+				me.emit('queue', queue)
+			})    
 		});
 }
 
@@ -3941,6 +3978,7 @@ var bindStreamEvents = function(parent, child) {
 	child.on('data', function(data) { parent.emit('data',data)});
 	child.on('end',   function() { parent.emit('end')});
 	child.on('error', function(error) { parent.emit('error',error)});	
+	child.on('queue', function(queue) { parent.emit('queue', queue)});	
 }
 
 module.exports = bindStreamEvents;	
