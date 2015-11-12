@@ -5,6 +5,19 @@
 var iobio = global.iobio || {};
 global.iobio = iobio;
 
+
+// catch page unload event and send disconnect events to all connections
+global.onbeforeunload = function() {
+	global.iobioClients.forEach(function(runner){
+		try {
+			runner.client.close();
+			// runner.client.createStream({event:'disconnecting'});
+		} catch(e) {
+
+		}
+	});
+};
+
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
@@ -48,6 +61,13 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 	params = params || [];
 	params.push( this.url() );
 
+	// add write stream to options	
+	opts = opts || {};
+	if (this.options.writeStream) {
+		opts.writeStream = this.options.writeStream; 
+		opts.writeStream.serverAddress = this.connection.service;
+	}
+	
 	var newCmd = new iobio.cmd(service, params, opts);
 	
 	// generate base url

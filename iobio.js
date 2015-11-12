@@ -7,6 +7,19 @@
 var iobio = global.iobio || {};
 global.iobio = iobio;
 
+
+// catch page unload event and send disconnect events to all connections
+global.onbeforeunload = function() {
+	global.iobioClients.forEach(function(runner){
+		try {
+			runner.client.close();
+			// runner.client.createStream({event:'disconnecting'});
+		} catch(e) {
+
+		}
+	});
+};
+
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
@@ -50,6 +63,13 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 	params = params || [];
 	params.push( this.url() );
 
+	// add write stream to options	
+	opts = opts || {};
+	if (this.options.writeStream) {
+		opts.writeStream = this.options.writeStream; 
+		opts.writeStream.serverAddress = this.connection.service;
+	}
+	
 	var newCmd = new iobio.cmd(service, params, opts);
 	
 	// generate base url
@@ -3803,6 +3823,7 @@ if (typeof Object.create === 'function') {
 }
 
 },{}],10:[function(require,module,exports){
+(function (global){
 // Create connection and handle the results
 
 var EventEmitter = require('events').EventEmitter;
@@ -3840,12 +3861,16 @@ conn.prototype.run = function() {
 	// run
 	var runner = new this.Runner(this.urlBuilder, this.opts);
 	var me = this;
+	global.iobioClients = global.iobioClients || []
+	global.iobioClients.push(runner);
 
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this,runner);
 }
 
 module.exports = conn;
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
 },{"./protocol/http.js":11,"./protocol/ws.js":12,"./urlBuilder.js":15,"./utils/bindStreamEvents":16,"events":7,"inherits":9}],11:[function(require,module,exports){
 
 },{}],12:[function(require,module,exports){
@@ -3861,16 +3886,28 @@ var ws = function(urlBuilder, opts) {
 	var wsUrl = 'ws://' + urlBuilder.source,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
-		me = this;                
+		me = this;  
+
+		this.client = client;              
 
 		client.on('open', function(stream){
 			var stream = client.createStream({event:'run', params : {'url':wsUrl}});    
 
-			stream.on('createClientConnection', function(connection) {				
-				var serverAddress = connection.serverAddress || urlBuilder.getService();
+			stream.on('createClientConnection', function(connection) {
+				// determine serverAddress 
+				var serverAddress;
+				// go through by priority
+				if (connection.serverAddress)  // defined by requesting iobio service
+					serverAddress = connection.serverAddress;
+				else if (opts && opts.writeStream && opts.writeStream.serverAddress) // defined by writestream on client
+					serverAddress = opts.writeStream.serverAddress
+				else  // defined by client
+					serverAddress = urlBuilder.getService();				
+				
+				// connect to server
 				var dataClient = BinaryClient('ws://' + serverAddress);
-				dataClient.on('open', function() {					
-					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
+				dataClient.on('open', function() {										
+					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});					
 					if (opts.writeStream) 
 						opts.writeStream(dataStream, function() { dataStream.end();} )
 					else {

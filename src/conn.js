@@ -35,6 +35,8 @@ conn.prototype.run = function() {
 	// run
 	var runner = new this.Runner(this.urlBuilder, this.opts);
 	var me = this;
+	global.iobioClients = global.iobioClients || []
+	global.iobioClients.push(runner);
 
 	// bind stream events	
 	require('./utils/bindStreamEvents')(this,runner);

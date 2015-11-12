@@ -10,16 +10,28 @@ var ws = function(urlBuilder, opts) {
 	var wsUrl = 'ws://' + urlBuilder.source,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
-		me = this;                
+		me = this;  
+
+		this.client = client;              
 
 		client.on('open', function(stream){
 			var stream = client.createStream({event:'run', params : {'url':wsUrl}});    
 
-			stream.on('createClientConnection', function(connection) {				
-				var serverAddress = connection.serverAddress || urlBuilder.getService();
+			stream.on('createClientConnection', function(connection) {
+				// determine serverAddress 
+				var serverAddress;
+				// go through by priority
+				if (connection.serverAddress)  // defined by requesting iobio service
+					serverAddress = connection.serverAddress;
+				else if (opts && opts.writeStream && opts.writeStream.serverAddress) // defined by writestream on client
+					serverAddress = opts.writeStream.serverAddress
+				else  // defined by client
+					serverAddress = urlBuilder.getService();				
+				
+				// connect to server
 				var dataClient = BinaryClient('ws://' + serverAddress);
-				dataClient.on('open', function() {					
-					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
+				dataClient.on('open', function() {										
+					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});					
 					if (opts.writeStream) 
 						opts.writeStream(dataStream, function() { dataStream.end();} )
 					else {
