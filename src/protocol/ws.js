@@ -3,7 +3,7 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
-var ws = function(urlBuilder, opts) {
+var ws = function(urlBuilder, pipedCommands, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
@@ -12,33 +12,40 @@ var ws = function(urlBuilder, opts) {
 		client = BinaryClient(wsUrl),
 		me = this;  
 
-		this.client = client;              
+		this.client = client;
+		this.stream;            
 
 		client.on('open', function(stream){
 			var stream = client.createStream({event:'run', params : {'url':wsUrl}});    
+			me.stream = stream;
 
 			stream.on('createClientConnection', function(connection) {
 				// determine serverAddress 
 				var serverAddress;
+				console.log('createClientConneciontID = ' + connection.id);
+				var cmd = pipedCommands[connection.id];
+				var cmdOpts = cmd.options || opts;
+				var cmdUrlBuilder = cmd.connection.urlBuilder || urlBuilder;				
+
 				// go through by priority
 				if (connection.serverAddress)  // defined by requesting iobio service
 					serverAddress = connection.serverAddress;
-				else if (opts && opts.writeStream && opts.writeStream.serverAddress) // defined by writestream on client
-					serverAddress = opts.writeStream.serverAddress
+				else if (cmdOpts && cmdOpts.writeStream && cmdOpts.writeStream.serverAddress) // defined by writestream on client
+					serverAddress = cmdOpts.writeStream.serverAddress
 				else  // defined by client
-					serverAddress = urlBuilder.getService();				
+					serverAddress = cmdUrlBuilder.getService();				
 				
 				// connect to server
 				var dataClient = BinaryClient('ws://' + serverAddress);
 				dataClient.on('open', function() {										
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});					
-					if (opts.writeStream) 
-						opts.writeStream(dataStream, function() { dataStream.end();} )
+					if (cmdOpts.writeStream) 
+						cmdOpts.writeStream(dataStream, function() { dataStream.end();} )
 					else {
 						var reader = new FileReader();               
 						reader.onload = function(evt) { dataStream.write(evt.target.result); }						
 						reader.onloadend = function(evt) { dataStream.end(); }             
-						reader.readAsBinaryString( urlBuilder.getFile() );
+						reader.readAsBinaryString( cmdUrlBuilder.getFile() );
 					}
 				})
             })      
@@ -63,5 +70,13 @@ var ws = function(urlBuilder, opts) {
 
 // inherit eventEmitter
 inherits(ws, EventEmitter);
+
+ws.prototype.kill = function() {
+	this.stream.destroy();	
+}
+
+ws.prototype.end = function() {
+	this.stream.end();	
+}
 
 module.exports = ws;

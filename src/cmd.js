@@ -23,6 +23,7 @@ if ( typeof module === 'object' ) { module.exports = iobio;}
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
+var shortid = require('shortid');
 
 
 // Command function starts here
@@ -33,9 +34,15 @@ iobio.cmd = function(service, params, opts) {
 	// var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
 	var extend = require('extend');
 	
-   	this.options = { /* defaults */ };
+   	this.options = {
+   		/* defaults */ 
+   		id: shortid.generate()
+   	};
    	extend(this.options, opts);      	
-	this.protocol = 'ws';		
+   	console.log('id = ' + this.options.id);
+	this.protocol = 'ws';	
+	this.pipedCommands = { };	
+	this.pipedCommands[ this.options.id ] = this;
 
 	// make sure params isn't undefined
 	params = params || [];
@@ -61,22 +68,12 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 	params = params || [];
 	params.push( this.url() );
 
-	// add write stream to options	
-	opts = opts || {};
-	if (this.options.writeStream) {
-		opts.writeStream = this.options.writeStream; 
-		opts.writeStream.serverAddress = this.connection.service;
-	}
-	
-	var newCmd = new iobio.cmd(service, params, opts);
-	
-	// generate base url
-	// var conn = require('./conn');
-	// if (this.options.writeStream) opts.writeStream = this.options.writeStream; // add write stream to options	
-	// newCmd.connection = new conn( this.protocol, service, params, opts );	
-	
-	// // bind stream events	
-	// require('./utils/bindStreamEvents')(newCmd, newCmd.connection);
+	// create new command
+	var newCmd = new iobio.cmd(service, params, opts || {});
+	// var newCmd = new iobio.cmd(service, params, opts || {});
+
+	// transfer pipedCommands to new command;
+	for (var id in this.pipedCommands ) { newCmd.pipedCommands[id] = this.pipedCommands[id]; }
 	
 	return newCmd;
 }
@@ -85,6 +82,7 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.source; }
 iobio.cmd.prototype.http = function() { return 'http://' + this.connection.source; }
 iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.source; }
+iobio.cmd.prototype.id = this.id 
 
 
 // getters/setters
@@ -98,5 +96,18 @@ iobio.cmd.prototype.protocol = function(_) {
 iobio.cmd.prototype.run = function() {	
 
  	// run 
-	this.connection.run();
+	this.connection.run(this.pipedCommands); 
+	// send pipedCommands so that each command can properly handle the request comming back
+	// e.g. if the second command of 3 that are piped together is sending file data then it 
+	// should handle the request for data coming from the server.
+}
+
+// Kill running command instantly, leaving any data in the pipe
+iobio.cmd.prototype.kill = function() {
+	this.connection.runner.kill();
+}
+
+// End command safely. This may take a second or two and still give more data
+iobio.cmd.prototype.end = function() {
+	this.connection.runner.end();
 }

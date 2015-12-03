@@ -25,7 +25,7 @@ var urlBuilder = function(service, params, opts) {
 	}
 
 	// create source url
-	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams));		
+	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));		
 	if (sourceType == 'file') this.source += '&protocol=websocket';
 }
 

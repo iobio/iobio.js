@@ -31,15 +31,15 @@ inherits(conn, EventEmitter);
 // Functions
 
 // Run command on connection
-conn.prototype.run = function() {
+conn.prototype.run = function(pipedCommands) {
 	// run
-	var runner = new this.Runner(this.urlBuilder, this.opts);
+	this.runner = new this.Runner(this.urlBuilder, pipedCommands, this.opts);
 	var me = this;
 	global.iobioClients = global.iobioClients || []
-	global.iobioClients.push(runner);
+	global.iobioClients.push(this.runner);
 
 	// bind stream events	
-	require('./utils/bindStreamEvents')(this,runner);
+	require('./utils/bindStreamEvents')(this,this.runner);
 }
 
 module.exports = conn;

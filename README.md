@@ -55,6 +55,8 @@ To use simply download iobio.min.js and include in your html
 
 ## Use local files
 
+#### Read Whole File
+
 ```javascript
  // Get object file from prompt
  var cmd = new iobio.cmd('samtools', ['view', '-S', file]);			
@@ -66,6 +68,80 @@ To use simply download iobio.min.js and include in your html
 
  // Run like normal
  cmd.run();
+```
+
+#### Read Part of File
+
+```javascript
+ // Get object file from prompt
+ var blob = file.slice(0, 2000);
+ var cmd = new iobio.cmd('samtools', ['view', '-S', blob]);			
+
+ // Use results
+ cmd.on('data', function(d) {
+	// do stuff with results here
+ })
+
+ // Run like normal
+ cmd.run();
+```
+
+#### Finer Control With A Callback
+
+```javascript
+ // When you need to do something more complex or flexible, you can 
+ // request to get a write stream back from the server to write data to
+ var cmd = new iobio.cmd(
+ 			'samtools', 
+ 			['view', '-S', file], 
+ 			{ 
+ 				writeStream: function(stream) {  // stream to write to				
+                	chunks.forEach(function(chunk) {
+                		stream.write(chunk);
+                	})
+                	stream.end(); // make sure to end stream when finished 
+ 				}          		  // or results may be unpredictable
+ 			}
+ 		);			
+
+ // Use results
+ cmd.on('data', function(d) {
+	// do stuff with results here
+ })
+
+ // Run like normal
+ cmd.run();
+```
+
+## Working With The Queue
+To ensure that our servers aren't overwhelmed we only run a set number of concurrent
+requests. Additional requests are put in a queue and processed in order of reception.
+To keep users informed we send events for when a request is put into a queue and updates
+for when the request moves up the queue
+
+```javascript
+	// handle queue updates
+	cmd.on('queue', function(q) {
+	  // FILL IN HOW TO USE
+	})
+```
+
+## Troubleshooting
+The best way to troubleshoot is to see what errors you are getting back from the webservices
+
+```javascript
+	// print errors if any
+	cmd.on('error', function(e) {
+		console.log('error = ' + e);
+	})
+
+	// you can also get more info by using a url parameter of debug=true
+	var cmd = new iobio.cmd(
+		'samtools.iobio.io',
+		['view', '-H', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam'],
+		{ 'urlparams': {'debug':'true'} }
+	);
+	// now when you read error events you'll get errors and the debug log
 ```
 
 ## Developers
