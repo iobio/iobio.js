@@ -9,17 +9,17 @@ describe("Command", function() {
     describe("URL generation", function() {
         var cmd = new iobio.cmd('samtools.iobio.io', ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1']);
         it("creates an iobio url", function() {
-          var url = cmd.url();
+          var url = cmd.url().split('&id')[0];          
           expect(url).toEqual('iobio://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
 
         it("creates a http url", function() {
-          var url = cmd.http();
+          var url = cmd.http().split('&id')[0];
           expect(url).toEqual('http://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
 
         it("creates a websocket url", function() {
-          var url = cmd.ws();
+          var url = cmd.ws().split('&id')[0];
           expect(url).toEqual('ws://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
     });

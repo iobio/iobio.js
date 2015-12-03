@@ -24,8 +24,14 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 				var serverAddress;
 				console.log('createClientConneciontID = ' + connection.id);
 				var cmd = pipedCommands[connection.id];
-				var cmdOpts = cmd.options || opts;
-				var cmdUrlBuilder = cmd.connection.urlBuilder || urlBuilder;				
+				if (cmd) {
+					var cmdOpts = cmd.options;
+					var cmdUrlBuilder = cmd.connection.urlBuilder;					
+				} else {
+					var cmdOpts =  opts;
+					var cmdUrlBuilder =  urlBuilder;				
+				}
+				
 
 				// go through by priority
 				if (connection.serverAddress)  // defined by requesting iobio service
