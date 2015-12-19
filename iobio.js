@@ -4242,15 +4242,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 				dataClient.on('open', function() {										
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
 					var file = cmdUrlBuilder.getFile();
-					file.write(dataStream, cmdOpts);
-					// if (cmdOpts.writeStream) 
-					// 	cmdOpts.writeStream(dataStream, function() { dataStream.end();} )
-					// else {
-					// 	var reader = new FileReader();               
-					// 	reader.onload = function(evt) { dataStream.write(evt.target.result); }						
-					// 	reader.onloadend = function(evt) { dataStream.end(); }             
-					// 	reader.readAsBinaryString( cmdUrlBuilder.getFile() );
-					// }
+					file.write(dataStream, cmdOpts);					
 				})
             })      
 			
@@ -4287,6 +4279,8 @@ module.exports = ws;
 },{"binaryjs":2,"events":7,"inherits":9}],21:[function(require,module,exports){
 // Create iobio url for a file command and setup stream for reading the file to the iobio web service
 
+var BlobReadStream = require('binaryjs').BlobReadStream;
+
 var file = function(fileObj) {       
     var me = this;
     me.fileObj = fileObj
@@ -4311,7 +4305,7 @@ file.prototype.write = function(stream, options) {
 }
 
 module.exports = file;
-},{}],22:[function(require,module,exports){
+},{"binaryjs":2}],22:[function(require,module,exports){
 // Create iobio url for a url command
 
 var url = function(param) {	

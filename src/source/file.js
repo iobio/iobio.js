@@ -1,5 +1,7 @@
 // Create iobio url for a file command and setup stream for reading the file to the iobio web service
 
+var BlobReadStream = require('binaryjs').BlobReadStream;
+
 var file = function(fileObj) {       
     var me = this;
     me.fileObj = fileObj
