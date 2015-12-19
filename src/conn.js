@@ -17,7 +17,7 @@ var conn = function(protocol, service, params, opts) {
 	var UrlBuilder = require('./urlBuilder.js');
 	var	urlBuilder = new UrlBuilder(service, params, opts);
 	this.urlBuilder = urlBuilder;
-	this.source = urlBuilder.source;
+	this.uri = urlBuilder.uri;
 
 	if (protocol == 'ws')
 		this.Runner  = require('./protocol/ws.js');

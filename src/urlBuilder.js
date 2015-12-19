@@ -8,7 +8,7 @@ var urlBuilder = function(service, params, opts) {
 		sourceType
 		opts = opts || {};
 
-	this.source = null;
+	this.uri = null;	
 	this.service = service;
 	var me = this;	
 
@@ -16,17 +16,18 @@ var urlBuilder = function(service, params, opts) {
 	for (var i=0; i< params.length; i++) {					
 		if(params[i].slice(0,8) == 'iobio://') {
 			sourceType = 'url'
-			params[i] = urlParamer(params[i]);			
+			var source = new urlParamer(params[i]);
+			params[i] = source.getUrl();
 		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
-			sourceType = 'file';			
-			me.file = params[i];
-			params[i] = fileParamer(params[i]);			
+			sourceType = 'file';						
+			me.file = new fileParamer(params[i])
+			params[i] = me.file.getUrl();			
 		}
 	}
 
 	// create source url
-	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));		
-	if (sourceType == 'file') this.source += '&protocol=websocket';
+	this.uri =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));		
+	if (sourceType == 'file') this.uri += '&protocol=websocket';
 }
 
 urlBuilder.prototype.getFile = function() { return this.file; }

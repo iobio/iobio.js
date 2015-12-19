@@ -39,7 +39,6 @@ iobio.cmd = function(service, params, opts) {
    		id: shortid.generate()
    	};
    	extend(this.options, opts);      	
-   	console.log('id = ' + this.options.id);
 	this.protocol = 'ws';	
 	this.pipedCommands = { };	
 	this.pipedCommands[ this.options.id ] = this;
@@ -79,9 +78,9 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 }
 
 // Create url
-iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.source; }
-iobio.cmd.prototype.http = function() { return 'http://' + this.connection.source; }
-iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.source; }
+iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.uri; }
+iobio.cmd.prototype.http = function() { return 'http://' + this.connection.uri; }
+iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.uri; }
 iobio.cmd.prototype.id = this.id 
 
 

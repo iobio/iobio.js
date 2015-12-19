@@ -41,7 +41,6 @@ iobio.cmd = function(service, params, opts) {
    		id: shortid.generate()
    	};
    	extend(this.options, opts);      	
-   	console.log('id = ' + this.options.id);
 	this.protocol = 'ws';	
 	this.pipedCommands = { };	
 	this.pipedCommands[ this.options.id ] = this;
@@ -81,9 +80,9 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 }
 
 // Create url
-iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.source; }
-iobio.cmd.prototype.http = function() { return 'http://' + this.connection.source; }
-iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.source; }
+iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.uri; }
+iobio.cmd.prototype.http = function() { return 'http://' + this.connection.uri; }
+iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.uri; }
 iobio.cmd.prototype.id = this.id 
 
 
@@ -4165,7 +4164,7 @@ var conn = function(protocol, service, params, opts) {
 	var UrlBuilder = require('./urlBuilder.js');
 	var	urlBuilder = new UrlBuilder(service, params, opts);
 	this.urlBuilder = urlBuilder;
-	this.source = urlBuilder.source;
+	this.uri = urlBuilder.uri;
 
 	if (protocol == 'ws')
 		this.Runner  = require('./protocol/ws.js');
@@ -4205,7 +4204,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var wsUrl = 'ws://' + urlBuilder.source,
+	var wsUrl = 'ws://' + urlBuilder.uri,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
 		me = this;  
@@ -4219,8 +4218,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 
 			stream.on('createClientConnection', function(connection) {
 				// determine serverAddress 
-				var serverAddress;
-				console.log('createClientConneciontID = ' + connection.id);
+				var serverAddress;				
 				var cmd = pipedCommands[connection.id];
 				if (cmd) {
 					var cmdOpts = cmd.options;
@@ -4242,15 +4240,17 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 				// connect to server
 				var dataClient = BinaryClient('ws://' + serverAddress);
 				dataClient.on('open', function() {										
-					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});					
-					if (cmdOpts.writeStream) 
-						cmdOpts.writeStream(dataStream, function() { dataStream.end();} )
-					else {
-						var reader = new FileReader();               
-						reader.onload = function(evt) { dataStream.write(evt.target.result); }						
-						reader.onloadend = function(evt) { dataStream.end(); }             
-						reader.readAsBinaryString( cmdUrlBuilder.getFile() );
-					}
+					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
+					var file = cmdUrlBuilder.getFile();
+					file.write(dataStream, cmdOpts);
+					// if (cmdOpts.writeStream) 
+					// 	cmdOpts.writeStream(dataStream, function() { dataStream.end();} )
+					// else {
+					// 	var reader = new FileReader();               
+					// 	reader.onload = function(evt) { dataStream.write(evt.target.result); }						
+					// 	reader.onloadend = function(evt) { dataStream.end(); }             
+					// 	reader.readAsBinaryString( cmdUrlBuilder.getFile() );
+					// }
 				})
             })      
 			
@@ -4289,19 +4289,24 @@ module.exports = ws;
 
 var file = function(fileObj) {       
     var me = this;
-    me.fileObj = fileObj;
-
-    return  encodeURIComponent("http://client");
+    me.fileObj = fileObj
+    me.url = encodeURIComponent("http://client");
 }
 
+file.prototype.getType = function() { return 'file'; }
+
+file.prototype.getFileObj = function() { return this.fileObj; }
+
+file.prototype.getUrl = function( ) { return this.url; }
+
 file.prototype.write = function(stream, options) {
+
+    var me = this;
+    var chunkSize = options.chunkSize || (500 * 1024);             ;
     if (options && options.writeStream) 
         options.writeStream(stream, function() {stream.end()})
-    else {
-        var reader = new FileReader();               
-        reader.onload = function(evt) { stream.write(evt.target.result); }
-        reader.onloadend = function(evt) { stream.end(); }             
-        reader.readAsBinaryString(me.fileObj);
+    else {        
+        (new BlobReadStream(this.fileObj, {'chunkSize': chunkSize})).pipe(stream);
     }
 }
 
@@ -4311,9 +4316,12 @@ module.exports = file;
 
 var url = function(param) {	
 	var p = 'http' + param.slice(5,param.length);
-	return encodeURIComponent( p ); 
-
+	this.url =  encodeURIComponent( p ); 
 }
+
+url.prototype.getType = function() { return 'url'; }
+
+url.prototype.getUrl = function( ) { return this.url; }
 
 module.exports = url;
 },{}],23:[function(require,module,exports){
@@ -4327,7 +4335,7 @@ var urlBuilder = function(service, params, opts) {
 		sourceType
 		opts = opts || {};
 
-	this.source = null;
+	this.uri = null;	
 	this.service = service;
 	var me = this;	
 
@@ -4335,17 +4343,18 @@ var urlBuilder = function(service, params, opts) {
 	for (var i=0; i< params.length; i++) {					
 		if(params[i].slice(0,8) == 'iobio://') {
 			sourceType = 'url'
-			params[i] = urlParamer(params[i]);			
+			var source = new urlParamer(params[i]);
+			params[i] = source.getUrl();
 		} else if (Object.prototype.toString.call(params[i]) == '[object File]' || Object.prototype.toString.call(params[i]) == '[object Blob]') {
-			sourceType = 'file';			
-			me.file = params[i];
-			params[i] = fileParamer(params[i]);			
+			sourceType = 'file';						
+			me.file = new fileParamer(params[i])
+			params[i] = me.file.getUrl();			
 		}
 	}
 
 	// create source url
-	this.source =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));		
-	if (sourceType == 'file') this.source += '&protocol=websocket';
+	this.uri =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));		
+	if (sourceType == 'file') this.uri += '&protocol=websocket';
 }
 
 urlBuilder.prototype.getFile = function() { return this.file; }

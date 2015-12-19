@@ -7,7 +7,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var wsUrl = 'ws://' + urlBuilder.source,
+	var wsUrl = 'ws://' + urlBuilder.uri,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
 		me = this;  
@@ -21,8 +21,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 
 			stream.on('createClientConnection', function(connection) {
 				// determine serverAddress 
-				var serverAddress;
-				console.log('createClientConneciontID = ' + connection.id);
+				var serverAddress;				
 				var cmd = pipedCommands[connection.id];
 				if (cmd) {
 					var cmdOpts = cmd.options;
@@ -44,15 +43,9 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 				// connect to server
 				var dataClient = BinaryClient('ws://' + serverAddress);
 				dataClient.on('open', function() {										
-					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});					
-					if (cmdOpts.writeStream) 
-						cmdOpts.writeStream(dataStream, function() { dataStream.end();} )
-					else {
-						var reader = new FileReader();               
-						reader.onload = function(evt) { dataStream.write(evt.target.result); }						
-						reader.onloadend = function(evt) { dataStream.end(); }             
-						reader.readAsBinaryString( cmdUrlBuilder.getFile() );
-					}
+					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
+					var file = cmdUrlBuilder.getFile();
+					file.write(dataStream, cmdOpts);					
 				})
             })      
 			
