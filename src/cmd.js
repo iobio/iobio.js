@@ -5,19 +5,6 @@
 var iobio = global.iobio || {};
 global.iobio = iobio;
 
-
-// catch page unload event and send disconnect events to all connections
-global.onbeforeunload = function() {
-	global.iobioClients.forEach(function(runner){
-		try {
-			runner.client.close();
-			// runner.client.createStream({event:'disconnecting'});
-		} catch(e) {
-
-		}
-	});
-};
-
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
@@ -30,8 +17,7 @@ var shortid = require('shortid');
 iobio.cmd = function(service, params, opts) {	
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
-
-	// var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
+	
 	var extend = require('extend');
 	
    	this.options = {
