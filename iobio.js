@@ -7,19 +7,6 @@
 var iobio = global.iobio || {};
 global.iobio = iobio;
 
-
-// catch page unload event and send disconnect events to all connections
-global.onbeforeunload = function() {
-	global.iobioClients.forEach(function(runner){
-		try {
-			runner.client.close();
-			// runner.client.createStream({event:'disconnecting'});
-		} catch(e) {
-
-		}
-	});
-};
-
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
@@ -32,8 +19,7 @@ var shortid = require('shortid');
 iobio.cmd = function(service, params, opts) {	
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
-
-	// var cmdBuilder = require('./cmdBuilder.js'), // creates iobio commands 		
+	
 	var extend = require('extend');
 	
    	this.options = {
@@ -103,14 +89,22 @@ iobio.cmd.prototype.run = function() {
 	// should handle the request for data coming from the server.
 }
 
+// Close client and let server handle cleanup
+iobio.cmd.prototype.closeClient = function() {
+	if (this.connection && this.connection.runner )
+		this.connection.runner.closeClient();
+}
+
 // Kill running command instantly, leaving any data in the pipe
 iobio.cmd.prototype.kill = function() {
-	this.connection.runner.kill();
+	if (this.connection && this.connection.runner )
+		this.connection.runner.kill();
 }
 
 // End command safely. This may take a second or two and still give more data
 iobio.cmd.prototype.end = function() {
-	this.connection.runner.end();
+	if (this.connection && this.connection.runner )
+		this.connection.runner.end();
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
@@ -4207,27 +4201,28 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 	var wsUrl = 'ws://' + urlBuilder.uri,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
-		me = this;  
+		me = this;
 
 		this.client = client;
-		this.stream;            
+		this.stream;
 
 		client.on('open', function(stream){
-			var stream = client.createStream({event:'run', params : {'url':wsUrl}});    
+			var stream = client.createStream({event:'run', params : {'url':wsUrl}}),
+				first = true;
 			me.stream = stream;
 
 			stream.on('createClientConnection', function(connection) {
-				// determine serverAddress 
-				var serverAddress;				
+				// determine serverAddress
+				var serverAddress;
 				var cmd = pipedCommands[connection.id];
 				if (cmd) {
 					var cmdOpts = cmd.options;
-					var cmdUrlBuilder = cmd.connection.urlBuilder;					
+					var cmdUrlBuilder = cmd.connection.urlBuilder;
 				} else {
 					var cmdOpts =  opts;
-					var cmdUrlBuilder =  urlBuilder;				
+					var cmdUrlBuilder =  urlBuilder;
 				}
-				
+
 
 				// go through by priority
 				if (connection.serverAddress)  // defined by requesting iobio service
@@ -4235,44 +4230,56 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 				else if (cmdOpts && cmdOpts.writeStream && cmdOpts.writeStream.serverAddress) // defined by writestream on client
 					serverAddress = cmdOpts.writeStream.serverAddress
 				else  // defined by client
-					serverAddress = cmdUrlBuilder.getService();				
-				
+					serverAddress = cmdUrlBuilder.getService();
+
 				// connect to server
 				var dataClient = BinaryClient('ws://' + serverAddress);
-				dataClient.on('open', function() {										
+				dataClient.on('open', function() {
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
 					var file = cmdUrlBuilder.getFile();
-					file.write(dataStream, cmdOpts);					
+					file.write(dataStream, cmdOpts);
 				})
-            })      
-			
-			stream.on('data', function(data, options) {				
+            })
+
+			stream.on('data', function(data, options) {
+				if(first) { first=false; me.emit('start'); }
 				me.emit('data', data);
 			});
 
 			stream.on('end', function() {
 				me.emit('end');
-			})   
+			})
+
+			stream.on('exit', function(code) {
+				me.emit('exit', code);
+			})
 
 			stream.on('error', function(error) {
 				me.emit('error', error);
-			})  
+			})
 
-			stream.on('queue', function(queue) {				
+			stream.on('queue', function(queue) {
 				me.emit('queue', queue)
-			})    
+			})
 		});
 }
 
 // inherit eventEmitter
 inherits(ws, EventEmitter);
 
+ws.prototype.closeClient = function() {
+	if (this.client)
+		this.client.close();
+}
+
 ws.prototype.kill = function() {
-	this.stream.destroy();	
+	if (this.stream)
+		this.stream.destroy();
 }
 
 ws.prototype.end = function() {
-	this.stream.end();	
+	if (this.stream)
+		this.stream.end();
 }
 
 module.exports = ws;
@@ -4360,11 +4367,13 @@ var bindStreamEvents = function(parent, child) {
 	// handle events
 	child.on('data', function(data) { parent.emit('data',data)});
 	child.on('end',   function() { parent.emit('end')});
-	child.on('error', function(error) { parent.emit('error',error)});	
-	child.on('queue', function(queue) { parent.emit('queue', queue)});	
+	child.on('start', function() { parent.emit('start')});
+	child.on('exit', function(code) { parent.emit('exit',code)});
+	child.on('error', function(error) { parent.emit('error',error)});
+	child.on('queue', function(queue) { parent.emit('queue', queue)});
 }
 
-module.exports = bindStreamEvents;	
+module.exports = bindStreamEvents;
 },{}],25:[function(require,module,exports){
 var urlParams = function(params) {
 	var str = ''

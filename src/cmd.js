@@ -87,12 +87,20 @@ iobio.cmd.prototype.run = function() {
 	// should handle the request for data coming from the server.
 }
 
+// Close client and let server handle cleanup
+iobio.cmd.prototype.closeClient = function() {
+	if (this.connection && this.connection.runner )
+		this.connection.runner.closeClient();
+}
+
 // Kill running command instantly, leaving any data in the pipe
 iobio.cmd.prototype.kill = function() {
-	this.connection.runner.kill();
+	if (this.connection && this.connection.runner )
+		this.connection.runner.kill();
 }
 
 // End command safely. This may take a second or two and still give more data
 iobio.cmd.prototype.end = function() {
-	this.connection.runner.end();
+	if (this.connection && this.connection.runner )
+		this.connection.runner.end();
 }
