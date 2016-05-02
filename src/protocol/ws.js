@@ -7,7 +7,8 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var wsUrl = 'wss://' + urlBuilder.uri,
+	var protocol = opts.ssl ? 'wss' : 'ws',
+		wsUrl = protocol + '://' + urlBuilder.uri,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
 		me = this;
@@ -42,7 +43,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 					serverAddress = cmdUrlBuilder.getService();
 
 				// connect to server
-				var dataClient = BinaryClient('wss://' + serverAddress);
+				var dataClient = BinaryClient(protocol + '://' + serverAddress);
 				dataClient.on('open', function() {
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
 					var file = cmdUrlBuilder.getFile();

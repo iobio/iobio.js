@@ -16,29 +16,29 @@ var shortid = require('shortid');
 
 
 // Command function starts here
-iobio.cmd = function(service, params, opts) {	
+iobio.cmd = function(service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
-	
+
 	var extend = require('extend');
-	
+
    	this.options = {
-   		/* defaults */ 
+   		/* defaults */
    		id: shortid.generate()
    	};
-   	extend(this.options, opts);      	
-	this.protocol = 'ws';	
-	this.pipedCommands = { };	
+   	extend(this.options, opts);
+	this.protocol = this.options.ssl ? 'wss' : 'ws';
+	this.pipedCommands = { };
 	this.pipedCommands[ this.options.id ] = this;
 
 	// make sure params isn't undefined
 	params = params || [];
 
-	var conn = require('./conn.js'); // handles connection code		
+	var conn = require('./conn.js'); // handles connection code
 	this.connection = new conn(this.protocol, service, params, this.options);
 	var me = this;
-	
-	// bind stream events	
+
+	// bind stream events
 	require('./utils/bindStreamEvents')(this, this.connection);
 }
 
@@ -48,10 +48,10 @@ inherits(iobio.cmd, EventEmitter);
 // functions
 
 // Chain commands
-iobio.cmd.prototype.pipe = function(service, params, opts) {	
-	
-	
-	// add current url to params		
+iobio.cmd.prototype.pipe = function(service, params, opts) {
+
+
+	// add current url to params
 	params = params || [];
 	params.push( this.url() );
 
@@ -61,15 +61,17 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 
 	// transfer pipedCommands to new command;
 	for (var id in this.pipedCommands ) { newCmd.pipedCommands[id] = this.pipedCommands[id]; }
-	
+
 	return newCmd;
 }
 
 // Create url
 iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.uri; }
 iobio.cmd.prototype.http = function() { return 'http://' + this.connection.uri; }
+iobio.cmd.prototype.https = function() { return 'https://' + this.connection.uri; }
 iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.uri; }
-iobio.cmd.prototype.id = this.id 
+iobio.cmd.prototype.wss = function() { return 'wss://' + this.connection.uri; }
+iobio.cmd.prototype.id = this.id
 
 
 // getters/setters
@@ -80,12 +82,12 @@ iobio.cmd.prototype.protocol = function(_) {
 }
 
 // Execute command
-iobio.cmd.prototype.run = function() {	
+iobio.cmd.prototype.run = function() {
 
- 	// run 
-	this.connection.run(this.pipedCommands); 
+ 	// run
+	this.connection.run(this.pipedCommands);
 	// send pipedCommands so that each command can properly handle the request comming back
-	// e.g. if the second command of 3 that are piped together is sending file data then it 
+	// e.g. if the second command of 3 that are piped together is sending file data then it
 	// should handle the request for data coming from the server.
 }
 
@@ -4144,26 +4146,26 @@ module.exports = 0;
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
-var conn = function(protocol, service, params, opts) {	
+var conn = function(protocol, service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var me = this;	
+	var me = this;
 	this.opts = opts;
 	this.service = service;
 	this.protocol = protocol;
-	this.params = params;	
+	this.params = params;
 
-	// create url	
+	// create url
 	var UrlBuilder = require('./urlBuilder.js');
 	var	urlBuilder = new UrlBuilder(service, params, opts);
 	this.urlBuilder = urlBuilder;
 	this.uri = urlBuilder.uri;
 
-	if (protocol == 'ws')
+	if (protocol == 'ws' || protocol == 'wss')
 		this.Runner  = require('./protocol/ws.js');
-	else if (protocol == 'http')
-		this.Runner = require('./protocol/http.js');	
+	else if (protocol == 'http' || protocol == 'https')
+		this.Runner = require('./protocol/http.js');
 }
 
 // inherit eventEmitter
@@ -4179,7 +4181,7 @@ conn.prototype.run = function(pipedCommands) {
 	global.iobioClients = global.iobioClients || []
 	global.iobioClients.push(this.runner);
 
-	// bind stream events	
+	// bind stream events
 	require('./utils/bindStreamEvents')(this,this.runner);
 }
 
@@ -4198,7 +4200,8 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var wsUrl = 'wss://' + urlBuilder.uri,
+	var protocol = opts.ssl ? 'wss' : 'ws',
+		wsUrl = protocol + '://' + urlBuilder.uri,
 		BinaryClient = require('binaryjs').BinaryClient,
 		client = BinaryClient(wsUrl),
 		me = this;
@@ -4233,7 +4236,7 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 					serverAddress = cmdUrlBuilder.getService();
 
 				// connect to server
-				var dataClient = BinaryClient('wss://' + serverAddress);
+				var dataClient = BinaryClient(protocol + '://' + serverAddress);
 				dataClient.on('open', function() {
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
 					var file = cmdUrlBuilder.getFile();

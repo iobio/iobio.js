@@ -3,26 +3,26 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('inherits');
 
-var conn = function(protocol, service, params, opts) {	
+var conn = function(protocol, service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var me = this;	
+	var me = this;
 	this.opts = opts;
 	this.service = service;
 	this.protocol = protocol;
-	this.params = params;	
+	this.params = params;
 
-	// create url	
+	// create url
 	var UrlBuilder = require('./urlBuilder.js');
 	var	urlBuilder = new UrlBuilder(service, params, opts);
 	this.urlBuilder = urlBuilder;
 	this.uri = urlBuilder.uri;
 
-	if (protocol == 'ws')
+	if (protocol == 'ws' || protocol == 'wss')
 		this.Runner  = require('./protocol/ws.js');
-	else if (protocol == 'http')
-		this.Runner = require('./protocol/http.js');	
+	else if (protocol == 'http' || protocol == 'https')
+		this.Runner = require('./protocol/http.js');
 }
 
 // inherit eventEmitter
@@ -38,7 +38,7 @@ conn.prototype.run = function(pipedCommands) {
 	global.iobioClients = global.iobioClients || []
 	global.iobioClients.push(this.runner);
 
-	// bind stream events	
+	// bind stream events
 	require('./utils/bindStreamEvents')(this,this.runner);
 }
 
