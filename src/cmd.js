@@ -19,10 +19,12 @@ iobio.cmd = function(service, params, opts) {
 	EventEmitter.call(this);
 
 	var extend = require('extend');
+	var me = this;
 
+	this.id = shortid.generate()
    	this.options = {
    		/* defaults */
-   		id: shortid.generate()
+   		id: me.id
    	};
    	extend(this.options, opts);
 	this.protocol = this.options.ssl ? 'wss' : 'ws';
@@ -34,7 +36,7 @@ iobio.cmd = function(service, params, opts) {
 
 	var conn = require('./conn.js'); // handles connection code
 	this.connection = new conn(this.protocol, service, params, this.options);
-	var me = this;
+
 
 	// bind stream events
 	require('./utils/bindStreamEvents')(this, this.connection);
@@ -55,7 +57,6 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 
 	// create new command
 	var newCmd = new iobio.cmd(service, params, opts || {});
-	// var newCmd = new iobio.cmd(service, params, opts || {});
 
 	// transfer pipedCommands to new command;
 	for (var id in this.pipedCommands ) { newCmd.pipedCommands[id] = this.pipedCommands[id]; }

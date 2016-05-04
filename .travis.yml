@@ -9,3 +9,5 @@ before_install:
   - "sh -e /etc/init.d/xvfb start"
 after_script:
   - cat ./test/coverage/**/*.info | node ./node_modules/coveralls/bin/coveralls.js
+notifications:
+  slack: iobio:jq9clSWfQBS5yN0Ywv2odKZp
