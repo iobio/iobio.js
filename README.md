@@ -6,6 +6,10 @@ Handles the websocket code and makes creating iobio commands easier.
 To use simply download iobio.min.js and include in your html
 
 ## Create Command
+A new command takes 3 arguments
+* iobio webservice
+* array of arguments for the tool
+* hash of options
 
 ```javascript
  // create command using the same arguments as the original tool
@@ -34,6 +38,10 @@ To use simply download iobio.min.js and include in your html
  // execute command
  cmd.run();
 ```
+
+### Options
+* SSL[true] - uses ssl to run command either https or wss depending on the protocol
+* urlparams[hash] - hash that becomes the url parameters in the iobio url. These parameters get passed to the server.
 
 ## Chain Commands
 
