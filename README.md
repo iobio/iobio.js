@@ -125,14 +125,8 @@ A new command takes 3 arguments
 To ensure that our servers aren't overwhelmed we only run a set number of concurrent
 requests. Additional requests are put in a queue and processed in order of reception.
 To keep users informed we send events for when a request is put into a queue and updates
-for when the request moves up the queue
+for when the request moves up the queue. To see how the queue works and how to keep users informed look at the [example-queue app](https://github.com/iobio/example-queue)
 
-```javascript
-	// handle queue updates
-	cmd.on('queue', function(q) {
-	  // FILL IN HOW TO USE
-	})
-```
 
 ## Troubleshooting
 The best way to troubleshoot is to see what errors you are getting back from the webservices
