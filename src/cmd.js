@@ -8,9 +8,11 @@ global.iobio = iobio;
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
-var EventEmitter = require('events').EventEmitter;
-var inherits = require('inherits');
-var shortid = require('shortid');
+var EventEmitter = require('events').EventEmitter,
+	inherits = require('inherits'),
+	shortid = require('shortid'),
+	extend = require('extend'),
+	conn = require('./conn.js');
 
 
 // Command function starts here
@@ -18,7 +20,6 @@ iobio.cmd = function(service, params, opts) {
 	// Call EventEmitter constructor
 	EventEmitter.call(this);
 
-	var extend = require('extend');
 	var me = this;
 
 	this.id = shortid.generate()
@@ -28,15 +29,17 @@ iobio.cmd = function(service, params, opts) {
    	};
    	extend(this.options, opts);
 	this.protocol = this.options.ssl ? 'wss' : 'ws';
-	this.pipedCommands = { };
+	this.service = service;
+	this.params = params;
+	this.pipedCommands = {};
 	this.pipedCommands[ this.options.id ] = this;
+	this.argCommands = {};
 
 	// make sure params isn't undefined
 	params = params || [];
 
-	var conn = require('./conn.js'); // handles connection code
+	// handles the connection
 	this.connection = new conn(this.protocol, service, params, this.options);
-
 
 	// bind stream events
 	require('./utils/bindStreamEvents')(this, this.connection);
@@ -50,16 +53,29 @@ inherits(iobio.cmd, EventEmitter);
 // Chain commands
 iobio.cmd.prototype.pipe = function(service, params, opts) {
 
+	// Default options
+	var options = {
+		urlparams : { stdin: this.url() }
+	}
+	// merge options
+	extend(true, options, opts);
 
 	// add current url to params
 	params = params || [];
-	params.push( this.url() );
+	// params.push( this.url() );
 
 	// create new command
-	var newCmd = new iobio.cmd(service, params, opts || {});
+	var newCmd = new iobio.cmd(service, params, options);
 
 	// transfer pipedCommands to new command;
-	for (var id in this.pipedCommands ) { newCmd.pipedCommands[id] = this.pipedCommands[id]; }
+	for (var id in this.pipedCommands ) {
+		newCmd.pipedCommands[id] = this.pipedCommands[id];
+
+		// transfer argCommands to new command;
+		for (var id in this.connection.urlBuilder.argCommands ) {
+			newCmd.connection.urlBuilder.argCommands[id] = this.connection.urlBuilder.argCommands[id];
+		}
+	}
 
 	return newCmd;
 }
@@ -77,6 +93,18 @@ iobio.cmd.prototype.id = this.id
 iobio.cmd.prototype.protocol = function(_) {
 	if (!arguments.length) return this.protocol;
 	this.protocol = _;
+	return this;
+}
+
+iobio.cmd.prototype.service = function(_) {
+	if (!arguments.length) return this.service;
+	this.service = _;
+	return this;
+}
+
+iobio.cmd.prototype.arguments = function(_) {
+	if (!arguments.length) return this.params;
+	this.params = _;
 	return this;
 }
 
@@ -106,4 +134,8 @@ iobio.cmd.prototype.kill = function() {
 iobio.cmd.prototype.end = function() {
 	if (this.connection && this.connection.runner )
 		this.connection.runner.end();
+}
+
+iobio.cmd.prototype.toString = function() {
+	return '[object iobio.cmd]'
 }

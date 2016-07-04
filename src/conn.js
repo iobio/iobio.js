@@ -35,8 +35,6 @@ conn.prototype.run = function(pipedCommands) {
 	// run
 	this.runner = new this.Runner(this.urlBuilder, pipedCommands, this.opts);
 	var me = this;
-	global.iobioClients = global.iobioClients || []
-	global.iobioClients.push(this.runner);
 
 	// bind stream events
 	require('./utils/bindStreamEvents')(this,this.runner);

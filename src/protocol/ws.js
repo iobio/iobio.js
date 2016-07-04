@@ -24,10 +24,19 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 			stream.on('createClientConnection', function(connection) {
 				// determine serverAddress
 				var serverAddress;
-				var cmd = pipedCommands[connection.id];
-				if (cmd) {
+				// grab first half of connection id which is the command id
+				var cmdId = connection.id.split('&')[0];
+
+				// get correct command
+				var cmd;
+				if (pipedCommands[cmdId]) {
+					cmd = pipedCommands[cmdId];
 					var cmdOpts = cmd.options;
 					var cmdUrlBuilder = cmd.connection.urlBuilder;
+				} else if (urlBuilder.argCommands[cmdId]) {
+					cmd = urlBuilder.argCommands[cmdId];
+					var cmdOpts =  cmd.options;
+					var cmdUrlBuilder =  cmd.connection.urlBuilder;
 				} else {
 					var cmdOpts =  opts;
 					var cmdUrlBuilder =  urlBuilder;
@@ -40,14 +49,18 @@ var ws = function(urlBuilder, pipedCommands, opts) {
 				else if (cmdOpts && cmdOpts.writeStream && cmdOpts.writeStream.serverAddress) // defined by writestream on client
 					serverAddress = cmdOpts.writeStream.serverAddress
 				else  // defined by client
-					serverAddress = cmdUrlBuilder.getService();
+					serverAddress = cmdUrlBuilder.service;
 
 				// connect to server
 				var dataClient = BinaryClient(protocol + '://' + serverAddress);
 				dataClient.on('open', function() {
 					var dataStream = dataClient.createStream({event:'clientConnected', 'connectionID' : connection.id});
-					var file = cmdUrlBuilder.getFile();
+					var argPos = connection.argPos || 0;
+					var file = cmdUrlBuilder.files[argPos];
 					file.write(dataStream, cmdOpts);
+					dataStream.on('softend', function() {
+						file.end();
+					})
 				})
             })
 
@@ -83,13 +96,17 @@ ws.prototype.closeClient = function() {
 }
 
 ws.prototype.kill = function() {
+	// end stream immediately
 	if (this.stream)
-		this.stream.destroy();
+		this.stream.end();
 }
 
 ws.prototype.end = function() {
+	// send end event without ending stream
+    // this lets upstream streams end first, which causes
+    // downstream streams to end gracefully when the data runs out
 	if (this.stream)
-		this.stream.end();
+		this.stream.message('softend');
 }
 
 module.exports = ws;
