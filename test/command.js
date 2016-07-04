@@ -1,43 +1,45 @@
 'use strict';
 
-var iobio = require('../src/cmd.js')
+var iobio = require('../src/cmd.js'),
+    samtools = 'nv-prod.iobio.io/samtools/',
+    cat = '0.0.0.0:8071/';
 
 describe("Command", function() {
 
 
 
     describe("URL generation", function() {
-        var cmd = new iobio.cmd('samtools.iobio.io', ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1']);
+        var cmd = new iobio.cmd(samtools, ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1']);
         it("creates an iobio url", function() {
           var url = cmd.url().split('&id')[0];
-          expect(url).toEqual('iobio://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
+          expect(url).toEqual('iobio://' + samtools + '?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
 
         it("creates a http url", function() {
           var url = cmd.http().split('&id')[0];
-          expect(url).toEqual('http://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
+          expect(url).toEqual('http://' + samtools + '?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
 
         it("creates a https url", function() {
           var url = cmd.https().split('&id')[0];
-          expect(url).toEqual('https://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
+          expect(url).toEqual('https://' + samtools + '?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
 
         it("creates a websocket url", function() {
           var url = cmd.ws().split('&id')[0];
-          expect(url).toEqual('ws://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
+          expect(url).toEqual('ws://' + samtools + '?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
 
         it("creates a secure websocket url", function() {
           var url = cmd.wss().split('&id')[0];
-          expect(url).toEqual('wss://samtools.iobio.io?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
+          expect(url).toEqual('wss://' + samtools + '?cmd=view%20http://s3.amazonaws.com/iobio/jasmine_files/test.bam%201');
         });
     });
 
     describe("Execute", function() {
         var end, start, data, exitCode;
         beforeAll(function(done) {
-            var cmd1 = new iobio.cmd('samtools.iobio.io', ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1']);
+            var cmd1 = new iobio.cmd(samtools, ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1']);
             // Catch events
             cmd1.on('error', function(error) { /*ignore errors*/ })
                 .on('start', function(d) { start = true; })
@@ -75,7 +77,7 @@ describe("Command", function() {
     describe("Execute", function() {
         var data;
         beforeAll(function(done) {
-            var cmd = new iobio.cmd('samtools.iobio.io', ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1'], {ssl:true});
+            var cmd = new iobio.cmd(samtools, ['view', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1'], {ssl:true});
             cmd.on('error', function(error) { /*ignore errors*/ })
             cmd.on('data', function(d) {
                 data = d.split('\t')[0];
@@ -92,7 +94,7 @@ describe("Command", function() {
         var data;
         beforeAll(function(done) {
             var cmdPipe = new iobio.cmd(
-                    'samtools.iobio.io',
+                    samtools,
                     ['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1'],
                     { 'urlparams': {'encoding':'binary'} })
                 .pipe( 'bamtools.iobio.io', ['convert', '-format', 'json'] );
@@ -115,7 +117,7 @@ describe("Command", function() {
             var sam = "@HD\tVN:1.3\tSO:coordinate\n@SQ\tSN:1\tLN:249250621\n@RG\tID:ERR194147\tLB:NA12878_1\tPL:ILLUMINA\tPU:ILLUMINA-1\tSM:NA12878\nERR194147.602999777 147 1   11919   0   101M    =   11675   -345\   ATTTGCTGTCTCTTAGCCCAGACTTCCCGTGTCCTTTCCACCGGGCCTTTGAGAGGTCACAGGGTCTTGATGCTGTGGTCTTCATCTGCAGGTGTCTGACT   B@>CEIIIJJJJGHJIGGIIGDIEHFFCFHFGHIFFHEFCE@BBEBECDFDDDDBEDGEFEABEDEBDCDDEFEDDADCDBCEDCDDDECBDEDEECB?AA   MC:Z:101M   BD:Z:KBKOSRLQNONMLMPPKOOKONLLMJLLIINMNLBLMNIMLLJNNMKAJLJJJLMMMHHNLIMMKKJLMLNONHHMMMKKKMMLKNNNOMNIJONRPONJJ  MD:Z:101    PG:Z:MarkDuplicates RG:Z:ERR194147  BI:Z:OFMQTTNRPRPQOQRRMQRORQONPLNPLLPPOOFNPPLPNNLPQOOFMPLNKONOPKKPOKNOMNLOOOPQQKKPNOMNMPPOMQPPPOOLLPOSRQQMM  NM:i:0  MQ:i:0  AS:i:101    XS:i:101\n";
             var file = new Blob([sam]);
 
-            var cmdFile = new iobio.cmd('samtools.iobio.io', ['view', '-S', '-H', file]);
+            var cmdFile = new iobio.cmd(samtools, ['view', '-S', '-H', file]);
             cmdFile.on('error', function(error) { /*ignore error*/ })
             cmdFile.on('data', function(d) {
                 data = d.split("\t").join("").split("\n").join("");
@@ -132,11 +134,13 @@ describe("Command", function() {
         var data;
         beforeAll(function(done) {
             var sam = "@HD\tVN:1.3\tSO:coordinate\n@SQ\tSN:1\tLN:249250621\n@RG\tID:ERR194147\tLB:NA12878_1\tPL:ILLUMINA\tPU:ILLUMINA-1\tSM:NA12878\nERR194147.602999777 147 1   11919   0   101M    =   11675   -345\   ATTTGCTGTCTCTTAGCCCAGACTTCCCGTGTCCTTTCCACCGGGCCTTTGAGAGGTCACAGGGTCTTGATGCTGTGGTCTTCATCTGCAGGTGTCTGACT   B@>CEIIIJJJJGHJIGGIIGDIEHFFCFHFGHIFFHEFCE@BBEBECDFDDDDBEDGEFEABEDEBDCDDEFEDDADCDBCEDCDDDECBDEDEECB?AA   MC:Z:101M   BD:Z:KBKOSRLQNONMLMPPKOOKONLLMJLLIINMNLBLMNIMLLJNNMKAJLJJJLMMMHHNLIMMKKJLMLNONHHMMMKKKMMLKNNNOMNIJONRPONJJ  MD:Z:101    PG:Z:MarkDuplicates RG:Z:ERR194147  BI:Z:OFMQTTNRPRPQOQRRMQRORQONPLNPLLPPOOFNPPLPNNLPQOOFMPLNKONOPKKPOKNOMNLOOOPQQKKPNOMNMPPOMQPPPOOLLPOSRQQMM  NM:i:0  MQ:i:0  AS:i:101    XS:i:101\n";
-            var file = new Blob();
-            var cmdFile2 = new iobio.cmd('samtools.iobio.io', ['view', '-S', '-H', file], { writeStream: function(stream, done) {
+            // var file = new Blob();
+            var writeStream = function(stream, done) {
                 stream.write(sam);
                 done();
-            }});
+            }
+
+            var cmdFile2 = new iobio.cmd(samtools, ['view', '-S', '-H', writeStream]);
             cmdFile2.on('error', function(error) { /*ignore error*/ })
             cmdFile2.on('data', function(d) {
                 data = d.split("\t").join("").split("\n").join("");
@@ -145,8 +149,29 @@ describe("Command", function() {
             cmdFile2.run(); 
         },20000);
 
-        it("sends file data via writestream to file command", function() {
+        it("sends file data via function to file command", function() {
             expect(data).toEqual("@HDVN:1.3SO:coordinate@SQSN:1LN:249250621@RGID:ERR194147LB:NA12878_1PL:ILLUMINAPU:ILLUMINA-1SM:NA12878");
+        });
+    });
+
+    describe("Execute", function() {
+        var data = [];
+        beforeAll(function(done) {
+            var file1 = new Blob(["file1 data here"]);
+            var file2 = new Blob(["file2 data here"]);
+
+            var cmdFile = new iobio.cmd(cat , [file1, file2]);
+            cmdFile.on('error', function(error) { /*ignore error*/ })
+            cmdFile.on('data', function(d) {
+                data.push(d);
+            })
+            cmdFile.on('end', function() {
+                done();
+            })
+            cmdFile.run();
+        },20000);
+        it("file command with 2 files", function() {
+            expect(data.join('-')).toEqual("file1 data here-file2 data here");
         });
     });
 });
