@@ -50,7 +50,8 @@ A new command takes 3 arguments
 		'samtools.iobio.io',
 		['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'],
 		{ 'urlparams': {'encoding':'binary'} })
-	.pipe( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
+	.pipe( 'bamtools.iobio.io', ['convert', '-format', 'json', '-in', 'stdin'] ); // chain command
+	// Since you are piping here bamtools needs the stdin argument to tell it to look for data on stdin
 
  // Run like normal
  cmd.run(); 
