@@ -99,18 +99,16 @@ A new command takes 3 arguments
 ```javascript
  // When you need to do something more complex or flexible, you can 
  // request to get a write stream back from the server to write data to
- var cmd = new iobio.cmd(
- 			'samtools', 
- 			['view', '-S', file], 
- 			{ 
- 				writeStream: function(stream) {  // stream to write to				
-                	chunks.forEach(function(chunk) {
-                		stream.write(chunk);
-                	})
-                	stream.end(); // make sure to end stream when finished 
- 				}          		  // or results may be unpredictable
- 			}
- 		);			
+ // do this by simply replacing an argument that is expected to be a file, with a function
+ var writeStream = function(stream) {
+   // write some data "chunks" to stream for processing by samtools
+   chunks.forEach(function(chunk) {
+     stream.write(chunk);
+   })
+   stream.end(); // make sure to end stream when finished 
+ }  
+ 
+ var cmd = new iobio.cmd( 'samtools', ['view', '-S', writeStream] );			
 
  // Use results
  cmd.on('data', function(d) {
