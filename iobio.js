@@ -7,6 +7,8 @@
 var iobio = global.iobio || {};
 global.iobio = iobio;
 
+iobio.version = require('../package.json').version;
+
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
@@ -143,7 +145,7 @@ iobio.cmd.prototype.toString = function() {
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./conn.js":18,"./utils/bindStreamEvents":24,"events":7,"extend":8,"inherits":9,"shortid":13}],2:[function(require,module,exports){
+},{"../package.json":18,"./conn.js":19,"./utils/bindStreamEvents":25,"events":7,"extend":8,"inherits":9,"shortid":13}],2:[function(require,module,exports){
 (function (Buffer){
 /*! binary.js build:0.2.1, development. Copyright(c) 2012 Eric Zhang <eric@ericzhang.com> MIT Licensed */
 (function(exports){
@@ -4173,6 +4175,47 @@ module.exports = {
 module.exports = 0;
 
 },{}],18:[function(require,module,exports){
+module.exports={
+  "name": "iobio.js",
+  "version": "0.2.0",
+  "description": "Client side iobio javascript library for building and executing iobio commands",
+  "browser": {
+    "binaryjs": "./lib/binary.js"
+  },
+  "browserify-shim": {
+    "external": "global:External"
+  },
+  "devDependencies": {
+    "brfs": "^1.4.0",
+    "browserify": "^10.2.0",
+    "browserify-istanbul": "^0.2.1",
+    "browserify-shim": "~3.8.0",
+    "coveralls": "^2.11.2",
+    "gulp": "^3.8.11",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-uglify": "^1.2.0",
+    "jasmine-core": "^2.4.1",
+    "karma": "^0.12.31",
+    "karma-browserify": "^4.1.2",
+    "karma-chrome-launcher": "^0.1.7",
+    "karma-coverage": "0.2.6",
+    "karma-firefox-launcher": "^0.1.6",
+    "karma-jasmine": "^0.3.5",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "dependencies": {
+    "extend": "^2.0.1",
+    "inherits": "^2.0.1",
+    "shortid": "^2.2.2"
+  },
+  "scripts": {
+    "testServer": "node ./node_modules/karma/bin/karma start test/karma.conf.js",
+    "test": "gulp testTravis"
+  }
+}
+
+},{}],19:[function(require,module,exports){
 // Create connection and handle the results
 
 var EventEmitter = require('events').EventEmitter;
@@ -4216,9 +4259,9 @@ conn.prototype.run = function(pipedCommands) {
 }
 
 module.exports = conn;
-},{"./protocol/http.js":19,"./protocol/ws.js":20,"./urlBuilder.js":23,"./utils/bindStreamEvents":24,"events":7,"inherits":9}],19:[function(require,module,exports){
+},{"./protocol/http.js":20,"./protocol/ws.js":21,"./urlBuilder.js":24,"./utils/bindStreamEvents":25,"events":7,"inherits":9}],20:[function(require,module,exports){
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // Websocket code for running iobio command and getting results
 
 var EventEmitter = require('events').EventEmitter;
@@ -4331,7 +4374,7 @@ ws.prototype.end = function() {
 }
 
 module.exports = ws;
-},{"binaryjs":2,"events":7,"inherits":9}],21:[function(require,module,exports){
+},{"binaryjs":2,"events":7,"inherits":9}],22:[function(require,module,exports){
 // Create iobio url for a file/function command and setup stream for reading the file/function to the iobio web service
 
 var BlobReadStream = require('binaryjs').BlobReadStream;
@@ -4366,7 +4409,7 @@ file.prototype.end = function() {
 }
 
 module.exports = file;
-},{"binaryjs":2}],22:[function(require,module,exports){
+},{"binaryjs":2}],23:[function(require,module,exports){
 // Create iobio url for a url command
 
 var url = function(param) {	
@@ -4379,7 +4422,7 @@ url.prototype.getType = function() { return 'url'; }
 url.prototype.getUrl = function( ) { return this.url; }
 
 module.exports = url;
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 // Creates the command
 
 var urlBuilder = function(service, params, opts) {
@@ -4423,10 +4466,13 @@ var urlBuilder = function(service, params, opts) {
 	// create source url
 	this.uri =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));
 	if (fileSource) this.uri += '&protocol=websocket';
+
+	// add iobio version
+	this.uri += '&iobiojsversion=' + iobio.version;
 }
 
 module.exports = urlBuilder;
-},{"./source/file.js":21,"./source/url.js":22,"./utils/hash2UrlParams.js":25,"events":7}],24:[function(require,module,exports){
+},{"./source/file.js":22,"./source/url.js":23,"./utils/hash2UrlParams.js":26,"events":7}],25:[function(require,module,exports){
 var bindStreamEvents = function(parent, child) {
 	// handle events
 	child.on('data', function(data) { parent.emit('data',data)});
@@ -4438,7 +4484,7 @@ var bindStreamEvents = function(parent, child) {
 }
 
 module.exports = bindStreamEvents;
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var urlParams = function(params) {
 	var str = ''
 	if (params)

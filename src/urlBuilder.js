@@ -41,6 +41,9 @@ var urlBuilder = function(service, params, opts) {
 	// create source url
 	this.uri =  encodeURI(service + '?cmd=' + params.join(' ') + urlParams(opts.urlparams) + urlParams({id:opts.id}));
 	if (fileSource) this.uri += '&protocol=websocket';
+
+	// add iobio version
+	this.uri += '&iobiojsversion=' + iobio.version;
 }
 
 module.exports = urlBuilder;

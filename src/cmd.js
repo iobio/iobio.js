@@ -5,6 +5,8 @@
 var iobio = global.iobio || {};
 global.iobio = iobio;
 
+iobio.version = require('../package.json').version;
+
 // export if being used as a node module - needed for test framework
 if ( typeof module === 'object' ) { module.exports = iobio;}
 
