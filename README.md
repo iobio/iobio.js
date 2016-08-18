@@ -50,7 +50,8 @@ A new command takes 3 arguments
 		'samtools.iobio.io',
 		['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/NA12878/NA12878.autsome.bam', '1:6864420-6869420'],
 		{ 'urlparams': {'encoding':'binary'} })
-	.pipe( 'bamtools.iobio.io', ['convert', '-format', 'json'] ); // chain command
+	.pipe( 'bamtools.iobio.io', ['convert', '-format', 'json', '-in', 'stdin'] ); // chain command
+	// Since you are piping here bamtools needs the stdin argument to tell it to look for data on stdin
 
  // Run like normal
  cmd.run(); 
@@ -99,18 +100,16 @@ A new command takes 3 arguments
 ```javascript
  // When you need to do something more complex or flexible, you can 
  // request to get a write stream back from the server to write data to
- var cmd = new iobio.cmd(
- 			'samtools', 
- 			['view', '-S', file], 
- 			{ 
- 				writeStream: function(stream) {  // stream to write to				
-                	chunks.forEach(function(chunk) {
-                		stream.write(chunk);
-                	})
-                	stream.end(); // make sure to end stream when finished 
- 				}          		  // or results may be unpredictable
- 			}
- 		);			
+ // do this by simply replacing an argument that is expected to be a file, with a function
+ var writeStream = function(stream) {
+   // write some data "chunks" to stream for processing by samtools
+   chunks.forEach(function(chunk) {
+     stream.write(chunk);
+   })
+   stream.end(); // make sure to end stream when finished 
+ }  
+ 
+ var cmd = new iobio.cmd( 'samtools', ['view', '-S', writeStream] );			
 
  // Use results
  cmd.on('data', function(d) {
@@ -125,14 +124,8 @@ A new command takes 3 arguments
 To ensure that our servers aren't overwhelmed we only run a set number of concurrent
 requests. Additional requests are put in a queue and processed in order of reception.
 To keep users informed we send events for when a request is put into a queue and updates
-for when the request moves up the queue
+for when the request moves up the queue. To see how the queue works and how to keep users informed look at the [example-queue app](https://github.com/iobio/example-queue)
 
-```javascript
-	// handle queue updates
-	cmd.on('queue', function(q) {
-	  // FILL IN HOW TO USE
-	})
-```
 
 ## Troubleshooting
 The best way to troubleshoot is to see what errors you are getting back from the webservices
