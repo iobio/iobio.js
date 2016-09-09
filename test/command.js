@@ -2,7 +2,7 @@
 
 var iobio = require('../src/cmd.js'),
     samtools = 'nv-prod.iobio.io/samtools/',
-    cat = '0.0.0.0:8071/';
+    bamtools = 'nv-prod.iobio.io/bamtools/';
 
 describe("Command", function() {
 
@@ -97,7 +97,7 @@ describe("Command", function() {
                     samtools,
                     ['view', '-b', '-h', 'http://s3.amazonaws.com/iobio/jasmine_files/test.bam', '1'],
                     { 'urlparams': {'encoding':'binary'} })
-                .pipe( 'bamtools.iobio.io', ['convert', '-format', 'json'] );
+                .pipe( bamtools, ['convert', '-format', 'json'] );
 
             cmdPipe.on('error', function(error) { /*ignore error*/ })
             cmdPipe.on('data', function(d) {
@@ -134,14 +134,14 @@ describe("Command", function() {
         var data;
         beforeAll(function(done) {
             var sam = "@HD\tVN:1.3\tSO:coordinate\n@SQ\tSN:1\tLN:249250621\n@RG\tID:ERR194147\tLB:NA12878_1\tPL:ILLUMINA\tPU:ILLUMINA-1\tSM:NA12878\nERR194147.602999777 147 1   11919   0   101M    =   11675   -345\   ATTTGCTGTCTCTTAGCCCAGACTTCCCGTGTCCTTTCCACCGGGCCTTTGAGAGGTCACAGGGTCTTGATGCTGTGGTCTTCATCTGCAGGTGTCTGACT   B@>CEIIIJJJJGHJIGGIIGDIEHFFCFHFGHIFFHEFCE@BBEBECDFDDDDBEDGEFEABEDEBDCDDEFEDDADCDBCEDCDDDECBDEDEECB?AA   MC:Z:101M   BD:Z:KBKOSRLQNONMLMPPKOOKONLLMJLLIINMNLBLMNIMLLJNNMKAJLJJJLMMMHHNLIMMKKJLMLNONHHMMMKKKMMLKNNNOMNIJONRPONJJ  MD:Z:101    PG:Z:MarkDuplicates RG:Z:ERR194147  BI:Z:OFMQTTNRPRPQOQRRMQRORQONPLNPLLPPOOFNPPLPNNLPQOOFMPLNKONOPKKPOKNOMNLOOOPQQKKPNOMNMPPOMQPPPOOLLPOSRQQMM  NM:i:0  MQ:i:0  AS:i:101    XS:i:101\n";
-            // var file = new Blob();
+
             var writeStream = function(stream, done) {
                 stream.write(sam);
                 done();
             }
 
             var cmdFile2 = new iobio.cmd(samtools, ['view', '-S', '-H', writeStream]);
-            cmdFile2.on('error', function(error) { /*ignore error*/ })
+            cmdFile2.on('error', function(error) { /* ignore error */ })
             cmdFile2.on('data', function(d) {
                 data = d.split("\t").join("").split("\n").join("");
                 done();
@@ -157,13 +157,17 @@ describe("Command", function() {
     describe("Execute", function() {
         var data = [];
         beforeAll(function(done) {
-            var file1 = new Blob(["file1 data here"]);
-            var file2 = new Blob(["file2 data here"]);
+            var file1 = "iobio://s3.amazonaws.com/iobio/jasmine_files/test.bam";
+            var file2 = "iobio://s3.amazonaws.com/iobio/jasmine_files/test2.bam";
 
-            var cmdFile = new iobio.cmd(cat , [file1, file2]);
+            var cmdFile = new iobio.cmd(samtools , ['merge', '-', file1, file2], {urlparams: {protocol:'http', encoding:'binary'} })
+                .pipe(samtools, ['view', '-'])
             cmdFile.on('error', function(error) { /*ignore error*/ })
             cmdFile.on('data', function(d) {
-                data.push(d);
+                d.split("\n").forEach(function(record) {
+                    if (record != "")
+                        data.push(record.split("\t")[0]);
+                })
             })
             cmdFile.on('end', function() {
                 done();
@@ -171,7 +175,7 @@ describe("Command", function() {
             cmdFile.run();
         },20000);
         it("file command with 2 files", function() {
-            expect(data.join('-')).toEqual("file1 data here-file2 data here");
+            expect(data.join('-')).toEqual("ERR194147.602999777-ERR194147.602999778");
         });
     });
 });
