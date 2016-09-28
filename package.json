@@ -1,6 +1,6 @@
 {
   "name": "iobio.js",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Client side iobio javascript library for building and executing iobio commands",
   "browser": {
     "binaryjs": "./lib/binary.js"
