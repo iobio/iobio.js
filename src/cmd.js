@@ -83,7 +83,7 @@ iobio.cmd.prototype.pipe = function(service, params, opts) {
 }
 
 // Create url
-iobio.cmd.prototype.url = function() { return 'iobio://' + this.connection.uri; }
+iobio.cmd.prototype.url = function() { return (this.options.ssl ? 'iobios://' : 'iobio://') + this.connection.uri; }
 iobio.cmd.prototype.http = function() { return 'http://' + this.connection.uri; }
 iobio.cmd.prototype.https = function() { return 'https://' + this.connection.uri; }
 iobio.cmd.prototype.ws = function() { return 'ws://' + this.connection.uri; }
